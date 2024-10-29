@@ -59,7 +59,6 @@ image config.vfat {
    vfat {
       label = "BOOTFS"
       file "autoboot.txt" { image = "autoboot.txt" }
-      file "tryboot.txt" { image = "tryboot.txt" }
       extraargs = "-s 1"
    }
    size = 32M

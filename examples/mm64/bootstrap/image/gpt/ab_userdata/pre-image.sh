@@ -4,24 +4,16 @@ image_top=$(readlink -f $(dirname "$0"))
 rootfs=$1
 genimg_in=$2
 
-# This disk layout requires two files which are pulled in via genimage cfg:
-#  autoboot.txt - used for indicating the default boot partition
-#  tryboot.txt - used for tryboot
-# Both relate directly to the layout in genimage.cfg.in
+# Set up the partition layout for tryboot support. Partition numbering
+# relates directly to the layout in genimage.cfg.in
 
 cat << EOF > "${genimg_in}/autoboot.txt"
-[ALL]
-boot_partition=2
-EOF
-
-cat << EOF > "${genimg_in}/tryboot.txt"
-[ALL]
+[all]
 tryboot_a_b=1
 boot_partition=2
 [tryboot]
 boot_partition=3
 EOF
-
 
 # Generate the config for genimage to ingest:
 # FIXME - calc dynamically
