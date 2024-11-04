@@ -158,15 +158,30 @@ ensure_loopdev_partitions() {
 }
 export -f ensure_loopdev_partitions
 
-cfg_read_section() {
+read_config_section() {
    local section=$1
    local cfg=$2
    local attrs=$(crudini --get --format=sh $cfg $section)
-   if [ $? -ne 0 ] ; then
-      echo "cfg: $cfg does not specify $section"
+   if [ $? -eq 0 ] ; then
+      while IFS="=" read -r key value ; do
+         eval IGconf_${key}="$value"
+      done < <(printf '%s\n' "$attrs")
    fi
-   for a in $attrs ; do
-      eval "IGconf_$a"
-   done
 }
-export -f cfg_read_section
+export -f read_config_section
+
+
+read_options() {
+   if [ -s "$1" ] ; then
+      local attrs=$(cat $1)
+   else
+      local attrs=$(cat)
+   fi
+   while IFS="=" read -r key value ; do
+      [[ "$key" =~ ^#.*$ ]] && continue
+      [[ "$key" =~ ^$ ]] && continue
+      [[ "$value" =~ ^$ ]] && continue
+      eval IGopt_${key}="$value"
+   done < <(printf '%s\n' "$attrs")
+}
+export -f read_options
