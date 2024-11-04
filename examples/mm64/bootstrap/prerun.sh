@@ -94,14 +94,14 @@ if [ -d $IGTOP/board/$IGconf_board/rootfs-overlay ] ; then
 fi
 
 
-# Run pre-genimage hooks: image layout first then board
-if [ -x $IGTOP/image/$IGconf_layout/pre-image.sh ] ; then
-   echo "$IGconf_layout:pre-image"
-   $IGTOP/image/$IGconf_layout/pre-image.sh ${WORKROOT}/rootfs ${WORKROOT}
-fi
+# Run pre-genimage hooks: board then image layout
 if [ -x $IGTOP/board/$IGconf_board/pre-image.sh ] ; then
    echo "$IGconf_board:pre-image"
    $IGTOP/board/$IGconf_board/pre-image.sh ${WORKROOT}/rootfs ${WORKROOT}
+fi
+if [ -x $IGTOP/image/$IGconf_layout/pre-image.sh ] ; then
+   echo "$IGconf_layout:pre-image"
+   $IGTOP/image/$IGconf_layout/pre-image.sh ${WORKROOT}/rootfs ${WORKROOT}
 fi
 
 
