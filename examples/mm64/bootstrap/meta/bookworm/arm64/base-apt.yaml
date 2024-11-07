@@ -10,12 +10,6 @@ mmdebstrap:
     - deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware
     - deb http://deb.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware
     - deb http://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware
-  setup-hooks:
-    - |-
-      if [ -n "$IGopt_APT_PROXY" ]; then
-         mkdir -p $1/etc/apt/apt.conf.d
-         echo "Acquire::http { Proxy $IGopt_APT_PROXY; };" > $1/etc/apt/apt.conf.d/51cache
-      fi
   essential-hooks:
     - echo tzdata tzdata/Areas select $IGopt_TIMEZONE_AREA
         | chroot $1 debconf-set-selections

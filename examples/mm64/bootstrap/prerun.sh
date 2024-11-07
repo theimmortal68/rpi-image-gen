@@ -87,6 +87,9 @@ for option in "${IGopt_bootstrap[@]}" ; do
          ARGS_ENV+=('--env' IGopt_TIMEZONE_AREA="${IGopt_TIMEZONE_DEFAULT%%/*}")
          ARGS_ENV+=('--env' IGopt_TIMEZONE_CITY="${IGopt_TIMEZONE_DEFAULT##*/}")
          ;;
+      IGopt_APT_PROXY)
+         ARGS_ENV+=('--env' IGopt_APT_PROXY_HTTP="${IGopt_APT_PROXY}")
+         ;;
       *)
          ARGS_ENV+=('--env' ${option}=${!option})
          ;;
