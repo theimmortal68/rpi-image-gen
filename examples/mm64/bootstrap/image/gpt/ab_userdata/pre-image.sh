@@ -16,9 +16,9 @@ boot_partition=3
 EOF
 
 # Generate the config for genimage to ingest:
-# FIXME - calc dynamically
-FW_SIZE=60M
-ROOT_SIZE=700M
+# FIXME - sizes should be easily configurable
+FW_SIZE=125%
+ROOT_SIZE=200%
 
 SLOTP_PROCESS=$(readlink -f ${image_top}/slot-post-process.sh)
 
