@@ -4,8 +4,6 @@ set -eo pipefail
 
 IGTOP=$(readlink -f $(dirname "$0"))
 
-WORKROOT=${STAGE_WORK_DIR}
-
 
 # TODO need top level selectors for:
 #  external dir
@@ -17,11 +15,12 @@ WORKROOT=${STAGE_WORK_DIR}
 #        profile/          [override]
 #        config/           [override]
 #        board/            [override]
-#        image/            [augment]
+#        image/            [override]
 
-IGPROFILE_TOP=${IGTOP}/profile
-IGCONFIG_TOP=${IGTOP}/config
-IGBOARD_TOP=${IGTOP}/board
+IGTOP_PROFILE=${IGTOP}/profile
+IGTOP_CONFIG=${IGTOP}/config
+IGTOP_BOARD=${IGTOP}/board
+IGTOP_IMAGE=${IGTOP}/image
 
 
 # Internalise directory structure variables
@@ -32,56 +31,70 @@ RPI_TEMPLATES=$IGTOP/templates/rpi
 
 # TODO get from top level arg, eg -p generic64-min-ab
 INCONFIG=generic64-apt-ab
-test -s ${IGCONFIG_TOP}/${INCONFIG}.cfg || (>&2 echo ${IGCONFIG_TOP}/${INCONFIG}.cfg is invalid; exit 1)
+test -s ${IGTOP_CONFIG}/${INCONFIG}.cfg || (>&2 echo ${IGTOP_CONFIG}/${INCONFIG}.cfg is invalid; exit 1)
 
 
 # Config defaults
-IGconf_board=pi5
+IGconf_target_board=pi5
 
 
 # Read and validate config
-read_config_section image ${IGCONFIG_TOP}/${INCONFIG}.cfg
-read_config_section system ${IGCONFIG_TOP}/${INCONFIG}.cfg
-[[ -z ${IGconf_layout+x} ]] && (>&2 echo config has no image layout; exit 1)
-[[ -z ${IGconf_profile+x} ]] && (>&2 echo config has no profile; exit 1)
+read_config_section image ${IGTOP_CONFIG}/${INCONFIG}.cfg
+read_config_section system ${IGTOP_CONFIG}/${INCONFIG}.cfg
+read_config_section target ${IGTOP_CONFIG}/${INCONFIG}.cfg
 
-test -d $IGTOP/image/$IGconf_layout || (>&2 echo disk layout "$IGconf_layout" is invalid; exit 1)
-test -s $IGTOP/image/$IGconf_layout/genimage.cfg.in || (>&2 echo "$IGconf_layout" has no genimage cfg; exit 1)
-test -f $IGTOP/profile/$IGconf_profile || (>&2 echo profile "$IGconf_profile" is invalid; exit 1)
-test -d $IGTOP/board/$IGconf_board || (>&2 echo board "$IGconf_board" is invalid; exit 1)
+[[ -z ${IGconf_image_layout+x} ]] && (>&2 echo config has no image layout; exit 1)
+[[ -z ${IGconf_system_profile+x} ]] && (>&2 echo config has no profile; exit 1)
+[[ -z ${IGconf_target_board+x} ]] && (>&2 echo config has no board; exit 1)
 
-
-# Export this set of config variables
-export IGconf_board
-export IGconf_layout
-export IGconf_deploydir=$WORKROOT/deploy
+test -d ${IGTOP_IMAGE}/$IGconf_image_layout || (>&2 echo disk layout "$IGconf_image_layout" is invalid; exit 1)
+test -f ${IGTOP_PROFILE}/$IGconf_system_profile || (>&2 echo profile "$IGconf_system_profile" is invalid; exit 1)
+test -d ${IGTOP_BOARD}/$IGconf_target_board || (>&2 echo board "$IGconf_target_board" is invalid; exit 1)
 
 
-# Read and validate options - TODO read file via top level
-# These could be aggregated with the config file if required. For now, retain
-# parity with pi-gen variable names.
+# post-config:
+INAME="${IGconf_image_name:-${INCONFIG}}"
+
+
+# Read and validate options - TODO read options file via top level.
+# These could be aggregated with the config file.
+# TODO decide to retain/change any existing pi-gen variable names.
 read_options << EOF
 APT_PROXY=$APT_PROXY
-LOCALE_DEFAULT=$LOCALE_DEFAULT
-TIMEZONE_DEFAULT=$TIMEZONE_DEFAULT
-FIRST_USER_NAME=$FIRST_USER_NAME
-FIRST_USER_PASS=$FIRST_USER_PASS
+LOCALE_DEFAULT="$LOCALE_DEFAULT"
+TIMEZONE_DEFAULT="$TIMEZONE_DEFAULT"
+FIRST_USER_NAME="$FIRST_USER_NAME"
+FIRST_USER_PASS="$FIRST_USER_PASS"
+KEYBOARD_LAYOUT="$KEYBOARD_LAYOUT"
+KEYBOARD_KEYMAP="$KEYBOARD_KEYMAP"
+TARGET_HOSTNAME="$TARGET_HOSTNAME"
 EOF
 
 
-# Assemble bootstrap environment and propagate options
+# post-options:
+IMG_NAME="${IGopt_IMG_NAME:-${INAME}}"
+WORKROOT="${IGopt_WORK_DIR:-${IGTOP}/work/${IMG_NAME}}"
+ARTEFACTS="${WORKROOT}"/artefacts
+IMG_DIR="${DEPLOY_DIR:-${ARTEFACTS}/image}"
+
+
+# Assemble environment for rootfs creation
 ARGS_ENV=()
 ARGS_ENV+=('--env' META_HOOKS=$META_HOOKS)
 ARGS_ENV+=('--env' RPI_TEMPLATES=$RPI_TEMPLATES)
 
-IGopt_bootstrap=(
+# Include these options
+ENV_ROOTFS_VARS=(
    IGopt_APT_PROXY
    IGopt_LOCALE_DEFAULT
    IGopt_TIMEZONE_DEFAULT
    IGopt_FIRST_USER_NAME
    IGopt_FIRST_USER_PASS
+   IGopt_KEYBOARD_LAYOUT
+   IGopt_KEYBOARD_KEYMAP
+   IGopt_TARGET_HOSTNAME
 )
-for option in "${IGopt_bootstrap[@]}" ; do
+for option in "${ENV_ROOTFS_VARS[@]}" ; do
    case $option in
       IGopt_TIMEZONE_DEFAULT)
          ARGS_ENV+=('--env' IGopt_TIMEZONE_AREA="${IGopt_TIMEZONE_DEFAULT%%/*}")
@@ -91,7 +104,7 @@ for option in "${IGopt_bootstrap[@]}" ; do
          ARGS_ENV+=('--env' IGopt_APT_PROXY_HTTP="${IGopt_APT_PROXY}")
          ;;
       *)
-         ARGS_ENV+=('--env' ${option}=${!option})
+         ARGS_ENV+=('--env' ${option}="${!option}")
          ;;
    esac
 done
@@ -102,9 +115,10 @@ ARGS_LAYERS=()
 while read -r line; do
    [[ "$line" =~ ^#.*$ ]] && continue
    [[ "$line" =~ ^$ ]] && continue
+   # TODO augment search with external meta dir and namespace
    test -f $META/$line.yaml || (>&2 echo invalid meta specifier: "$line"; exit 1)
    ARGS_LAYERS+=('--config' $META/$line.yaml)
-done < $IGTOP/profile/$IGconf_profile
+done < ${IGTOP_PROFILE}/$IGconf_system_profile
 
 
 # Generate rootfs
@@ -112,36 +126,61 @@ podman unshare bdebstrap \
    "${ARGS_LAYERS[@]}" \
    "${ARGS_ENV[@]}" \
    --name $IMG_NAME \
-   --hostname $TARGET_HOSTNAME \
-   --output-base-dir ${WORKROOT}/bdebstrap \
+   --hostname $IGopt_TARGET_HOSTNAME \
+   --output ${ARTEFACTS} \
    --target ${WORKROOT}/rootfs
 
 
+# post-build: assemble environment for subsequent operations
+POST_BUILD_VARS=(
+   IGconf_system_profile
+   IGconf_target_board
+   IGconf_image_layout
+   IMG_NAME
+   IMG_DIR
+)
+ENV_POST_BUILD=()
+for option in "${POST_BUILD_VARS[@]}" ; do
+   ENV_POST_BUILD+=(${option}="${!option}")
+done
+
+
+run()
+{
+   echo "IG:" "$@"
+   env "${ENV_POST_BUILD[@]}" "$@"
+   ret=$?
+   if [[ $ret -ne 0 ]]
+   then
+      >&2 echo "Error: [$@] ($ret)"
+      exit $ret
+   fi
+}
+
+
 # post-build: apply rootfs overlays - image layout then board
-if [ -d $IGTOP/image/$IGconf_layout/rootfs-overlay ] ; then
-   echo "$IGconf_layout:rootfs-overlay"
-   rsync -a $IGTOP/image/$IGconf_layout/rootfs-overlay/ ${WORKROOT}/rootfs
+if [ -d ${IGTOP_IMAGE}/$IGconf_image_layout/rootfs-overlay ] ; then
+   run rsync -a ${IGTOP_IMAGE}/$IGconf_image_layout/rootfs-overlay/ ${WORKROOT}/rootfs
 fi
-if [ -d $IGTOP/board/$IGconf_board/rootfs-overlay ] ; then
-   echo "$IGconf_board:rootfs-overlay"
-   rsync -a $IGTOP/board/$IGconf_board/rootfs-overlay/ ${WORKROOT}/rootfs
+if [ -d ${IGTOP_BOARD}/$IGconf_target_board/rootfs-overlay ] ; then
+   run rsync -a ${IGTOP_BOARD}/$IGconf_target_board/rootfs-overlay/ ${WORKROOT}/rootfs
 fi
 
 
-# post-build: hooks
-if [ -x $IGTOP/board/$IGconf_board/post-build.sh ] ; then
-   echo "$IGconf_board:post-build"
-   $IGTOP/board/$IGconf_board/post-build.sh ${WORKROOT}/rootfs
+# post-build: hooks - image layout then board
+if [ -x ${IGTOP_IMAGE}/$IGconf_image_layout/post-build.sh ] ; then
+   run ${IGTOP_IMAGE}/$IGconf_image_layout/post-build.sh ${WORKROOT}/rootfs
+fi
+if [ -x ${IGTOP_BOARD}/$IGconf_target_board/post-build.sh ] ; then
+   run ${IGTOP_BOARD}/$IGconf_target_board/post-build.sh ${WORKROOT}/rootfs
 fi
 
 
 # pre-image: hooks - board has priority over image layout
-if [ -x $IGTOP/board/$IGconf_board/pre-image.sh ] ; then
-   echo "$IGconf_board:pre-image"
-   $IGTOP/board/$IGconf_board/pre-image.sh ${WORKROOT}/rootfs ${WORKROOT}
-elif [ -x $IGTOP/image/$IGconf_layout/pre-image.sh ] ; then
-   echo "$IGconf_layout:pre-image"
-   $IGTOP/image/$IGconf_layout/pre-image.sh ${WORKROOT}/rootfs ${WORKROOT}
+if [ -x ${IGTOP_BOARD}/$IGconf_target_board/pre-image.sh ] ; then
+   run ${IGTOP_BOARD}/$IGconf_target_board/pre-image.sh ${WORKROOT}/rootfs ${WORKROOT}
+elif [ -x ${IGTOP_IMAGE}/$IGconf_image_layout/pre-image.sh ] ; then
+   run ${IGTOP_IMAGE}/$IGconf_image_layout/pre-image.sh ${WORKROOT}/rootfs ${WORKROOT}
 else
    >&2 echo "no pre-image hook"
 fi
@@ -154,13 +193,13 @@ fi
 
 GTMP=$(mktemp -d)
 trap 'rm -rf $GTMP' EXIT
-mkdir -p $IGconf_deploydir
+mkdir -p "$IMG_DIR"
 
 # Generate image
 podman unshare genimage \
    --rootpath ${WORKROOT}/rootfs \
    --tmppath $GTMP \
    --inputpath ${WORKROOT}   \
-   --outputpath ${WORKROOT} \
+   --outputpath ${ARTEFACTS} \
    --loglevel=10 \
    --config ${WORKROOT}/genimage.cfg

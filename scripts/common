@@ -164,7 +164,7 @@ read_config_section() {
    local attrs=$(crudini --get --format=sh $cfg $section)
    if [ $? -eq 0 ] ; then
       while IFS="=" read -r key value ; do
-         eval IGconf_${key}="$value"
+         eval IGconf_"${section}"_"${key}"="$value"
       done < <(printf '%s\n' "$attrs")
    fi
 }
@@ -181,7 +181,7 @@ read_options() {
       [[ "$key" =~ ^#.*$ ]] && continue
       [[ "$key" =~ ^$ ]] && continue
       [[ "$value" =~ ^$ ]] && continue
-      eval IGopt_${key}="$value"
+      eval IGopt_"${key}"="$value"
    done < <(printf '%s\n' "$attrs")
 }
 export -f read_options

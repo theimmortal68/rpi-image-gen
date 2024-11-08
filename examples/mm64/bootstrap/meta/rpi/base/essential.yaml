@@ -10,3 +10,4 @@ mmdebstrap:
     - iputils-ping
     - procps
     - nano
+    - zstd

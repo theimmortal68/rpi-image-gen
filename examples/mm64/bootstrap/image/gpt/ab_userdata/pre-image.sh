@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -eu
+
 image_top=$(readlink -f $(dirname "$0"))
 rootfs=$1
 genimg_in=$2
@@ -23,8 +25,8 @@ ROOT_SIZE=200%
 SLOTP_PROCESS=$(readlink -f ${image_top}/slot-post-process.sh)
 
 cat $image_top/genimage.cfg.in | sed \
-   -e "s|<DEPLOY_DIR>|$IGconf_deploydir|g" \
-   -e "s|<IMAGE_NAME>|${IGconf_board}-ab|g" \
+   -e "s|<DEPLOY_DIR>|$IMG_DIR|g" \
+   -e "s|<IMAGE_NAME>|$IMG_NAME|g" \
    -e "s|<FW_SIZE>|$FW_SIZE|g" \
    -e "s|<ROOT_SIZE>|$ROOT_SIZE|g" \
    -e "s|<SLOTP>|'$SLOTP_PROCESS'|g" \
