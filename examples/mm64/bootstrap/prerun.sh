@@ -209,20 +209,18 @@ else
 fi
 
 
-# Must exist
-if [ ! -s ${WORKROOT}/genimage.cfg ] ; then
-   >&2 echo "genimage config was not created - image generation is not possible"; exit 1
-fi
-
 GTMP=$(mktemp -d)
 trap 'rm -rf $GTMP' EXIT
 mkdir -p "$IGconf_image_deploydir"
 
-# Generate image
-podman unshare genimage \
-   --rootpath ${WORKROOT}/rootfs \
-   --tmppath $GTMP \
-   --inputpath ${WORKROOT}   \
-   --outputpath ${ARTEFACTS} \
-   --loglevel=10 \
-   --config ${WORKROOT}/genimage.cfg
+
+# Generate image(s)
+for f in "${WORKROOT}"/genimage*.cfg; do
+   podman unshare genimage \
+      --rootpath ${WORKROOT}/rootfs \
+      --tmppath $GTMP \
+      --inputpath ${WORKROOT}   \
+      --outputpath ${ARTEFACTS} \
+      --loglevel=10 \
+      --config $f
+done
