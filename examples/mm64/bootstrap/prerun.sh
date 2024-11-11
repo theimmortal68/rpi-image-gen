@@ -34,29 +34,26 @@ INCONFIG=generic64-apt-ab
 test -s ${IGTOP_CONFIG}/${INCONFIG}.cfg || (>&2 echo ${IGTOP_CONFIG}/${INCONFIG}.cfg is invalid; exit 1)
 
 
-# Config defaults
-IGconf_target_board=pi5
-
-
-# Read and validate config
+# Read config
 read_config_section image ${IGTOP_CONFIG}/${INCONFIG}.cfg
 read_config_section system ${IGTOP_CONFIG}/${INCONFIG}.cfg
 read_config_section target ${IGTOP_CONFIG}/${INCONFIG}.cfg
 
+# Defaults
+: ${IGconf_target_board:=pi5}
+: ${IGconf_image_name:="${IGconf_target_board}-${INCONFIG}"}
+: ${IGconf_image_suffix:=img}
+
 [[ -z ${IGconf_image_layout+x} ]] && (>&2 echo config has no image layout; exit 1)
 [[ -z ${IGconf_system_profile+x} ]] && (>&2 echo config has no profile; exit 1)
-[[ -z ${IGconf_target_board+x} ]] && (>&2 echo config has no board; exit 1)
 
-test -d ${IGTOP_IMAGE}/$IGconf_image_layout || (>&2 echo disk layout "$IGconf_image_layout" is invalid; exit 1)
+test -d ${IGTOP_IMAGE}/$IGconf_image_layout || (>&2 echo image layout "$IGconf_image_layout" is invalid; exit 1)
 test -f ${IGTOP_PROFILE}/$IGconf_system_profile || (>&2 echo profile "$IGconf_system_profile" is invalid; exit 1)
 test -d ${IGTOP_BOARD}/$IGconf_target_board || (>&2 echo board "$IGconf_target_board" is invalid; exit 1)
 
 
-# post-config:
-INAME="${IGconf_image_name:-${INCONFIG}}"
-
-
-# Read and validate options - TODO read options file via top level.
+# Read and validate options. Options can override config.
+# TODO read options file via top level.
 # These could be aggregated with the config file.
 # TODO decide to retain/change any existing pi-gen variable names.
 read_options << EOF
@@ -68,14 +65,21 @@ FIRST_USER_PASS="$FIRST_USER_PASS"
 KEYBOARD_LAYOUT="$KEYBOARD_LAYOUT"
 KEYBOARD_KEYMAP="$KEYBOARD_KEYMAP"
 TARGET_HOSTNAME="$TARGET_HOSTNAME"
+IMG_NAME="$IMG_NAME"
+IMG_SUFFIX="$IMG_SUFFIX"
+DEPLOY_DIR="$DEPLOY_DIR"
 EOF
 
 
 # post-options:
-IMG_NAME="${IGopt_IMG_NAME:-${INAME}}"
-WORKROOT="${IGopt_WORK_DIR:-${IGTOP}/work/${IMG_NAME}}"
+IGconf_image_name="${IGopt_IMG_NAME:-$IGconf_image_name}"
+IGconf_image_suffix="${IGopt_IMG_SUFFIX:-$IGconf_image_suffix}"
+
+WORKROOT="${IGopt_WORK_DIR:-${IGTOP}/work/${IGconf_image_name}}"
 ARTEFACTS="${WORKROOT}"/artefacts
-IMG_DIR="${DEPLOY_DIR:-${ARTEFACTS}/image}"
+
+: ${IGconf_image_deploydir:=${ARTEFACTS}/deploy}
+IGconf_image_deploydir="${IGopt_DEPLOY_DIR:-$IGconf_image_deploydir}"
 
 
 # Assemble environment for rootfs creation
@@ -136,8 +140,9 @@ POST_BUILD_VARS=(
    IGconf_system_profile
    IGconf_target_board
    IGconf_image_layout
-   IMG_NAME
-   IMG_DIR
+   IGconf_image_name
+   IGconf_image_suffix
+   IGconf_image_deploydir
 )
 ENV_POST_BUILD=()
 for option in "${POST_BUILD_VARS[@]}" ; do
@@ -211,7 +216,7 @@ fi
 
 GTMP=$(mktemp -d)
 trap 'rm -rf $GTMP' EXIT
-mkdir -p "$IMG_DIR"
+mkdir -p "$IGconf_image_deploydir"
 
 # Generate image
 podman unshare genimage \

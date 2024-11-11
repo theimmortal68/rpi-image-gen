@@ -24,8 +24,9 @@ ROOT_SIZE=200%
 SLOTP_PROCESS=$(readlink -f slot-post-process.sh)
 
 cat genimage.cfg.in | sed \
-   -e "s|<DEPLOY_DIR>|$IMG_DIR|g" \
-   -e "s|<IMAGE_NAME>|$IMG_NAME|g" \
+   -e "s|<DEPLOY_DIR>|$IGconf_image_deploydir|g" \
+   -e "s|<IMAGE_NAME>|$IGconf_image_name|g" \
+   -e "s|<IMAGE_SUFFIX>|$IGconf_image_suffix|g" \
    -e "s|<FW_SIZE>|$FW_SIZE|g" \
    -e "s|<ROOT_SIZE>|$ROOT_SIZE|g" \
    -e "s|<SLOTP>|'$SLOTP_PROCESS'|g" \
