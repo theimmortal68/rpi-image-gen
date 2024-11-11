@@ -145,10 +145,28 @@ for option in "${POST_BUILD_VARS[@]}" ; do
 done
 
 
+# hook execution
+runh()
+{
+   local hookdir=$(dirname "$1")
+   local hook=$(basename "$1")
+   shift 1
+   echo "IG:" "$hookdir"["$hook"] "$@"
+   env -C $hookdir "${ENV_POST_BUILD[@]}" ./"$hook" "$@"
+   ret=$?
+   if [[ $ret -ne 0 ]]
+   then
+      >&2 echo "Hook Error: ["$hookdir"/"$hook"] ($ret)"
+      exit $ret
+   fi
+}
+
+
+# cmd execution
 run()
 {
    echo "IG:" "$@"
-   env "${ENV_POST_BUILD[@]}" "$@"
+   env "$@"
    ret=$?
    if [[ $ret -ne 0 ]]
    then
@@ -169,18 +187,18 @@ fi
 
 # post-build: hooks - image layout then board
 if [ -x ${IGTOP_IMAGE}/$IGconf_image_layout/post-build.sh ] ; then
-   run ${IGTOP_IMAGE}/$IGconf_image_layout/post-build.sh ${WORKROOT}/rootfs
+   runh ${IGTOP_IMAGE}/$IGconf_image_layout/post-build.sh ${WORKROOT}/rootfs
 fi
 if [ -x ${IGTOP_BOARD}/$IGconf_target_board/post-build.sh ] ; then
-   run ${IGTOP_BOARD}/$IGconf_target_board/post-build.sh ${WORKROOT}/rootfs
+   runh ${IGTOP_BOARD}/$IGconf_target_board/post-build.sh ${WORKROOT}/rootfs
 fi
 
 
 # pre-image: hooks - board has priority over image layout
 if [ -x ${IGTOP_BOARD}/$IGconf_target_board/pre-image.sh ] ; then
-   run ${IGTOP_BOARD}/$IGconf_target_board/pre-image.sh ${WORKROOT}/rootfs ${WORKROOT}
+   runh ${IGTOP_BOARD}/$IGconf_target_board/pre-image.sh ${WORKROOT}/rootfs ${WORKROOT}
 elif [ -x ${IGTOP_IMAGE}/$IGconf_image_layout/pre-image.sh ] ; then
-   run ${IGTOP_IMAGE}/$IGconf_image_layout/pre-image.sh ${WORKROOT}/rootfs ${WORKROOT}
+   runh ${IGTOP_IMAGE}/$IGconf_image_layout/pre-image.sh ${WORKROOT}/rootfs ${WORKROOT}
 else
    >&2 echo "no pre-image hook"
 fi
