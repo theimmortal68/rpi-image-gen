@@ -10,3 +10,4 @@ rpi/arm64/linux-image-v8
 rpi/user-credentials
 rpi/misc-skel
 sys-apps/systemd-net-min
+sys-apps/fake-hwclock
