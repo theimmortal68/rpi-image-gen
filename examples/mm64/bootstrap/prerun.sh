@@ -143,6 +143,7 @@ POST_BUILD_VARS=(
    IGconf_image_suffix
    IGconf_image_outputdir
    IGconf_image_deploydir
+   IGconf_image_compression
 )
 ENV_POST_BUILD=()
 for option in "${POST_BUILD_VARS[@]}" ; do
@@ -224,3 +225,13 @@ for f in "${WORKROOT}"/genimage*.cfg; do
       --loglevel=10 \
       --config $f
 done
+
+
+# post-image: hooks - board has priority over image layout
+if [ -x ${IGTOP_BOARD}/$IGconf_target_board/post-image.sh ] ; then
+   runh ${IGTOP_BOARD}/$IGconf_target_board/post-image.sh $IGconf_image_deploydir
+elif [ -x ${IGTOP_IMAGE}/$IGconf_image_layout/post-image.sh ] ; then
+   runh ${IGTOP_IMAGE}/$IGconf_image_layout/post-image.sh $IGconf_image_deploydir
+else
+   :
+fi
