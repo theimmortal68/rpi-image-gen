@@ -76,10 +76,9 @@ IGconf_image_name="${IGopt_IMG_NAME:-$IGconf_image_name}"
 IGconf_image_suffix="${IGopt_IMG_SUFFIX:-$IGconf_image_suffix}"
 
 WORKROOT="${IGopt_WORK_DIR:-${IGTOP}/work/${IGconf_image_name}}"
-ARTEFACTS="${WORKROOT}"/artefacts
 
-: ${IGconf_image_deploydir:=${ARTEFACTS}/deploy}
-IGconf_image_deploydir="${IGopt_DEPLOY_DIR:-$IGconf_image_deploydir}"
+: ${IGconf_image_outputdir:=${WORKROOT}/artefacts}
+IGconf_image_deploydir="${IGopt_DEPLOY_DIR:-${IGconf_image_outputdir}/deploy}"
 
 
 # Assemble environment for rootfs creation
@@ -131,7 +130,7 @@ podman unshare bdebstrap \
    "${ARGS_ENV[@]}" \
    --name $IMG_NAME \
    --hostname $IGopt_TARGET_HOSTNAME \
-   --output ${ARTEFACTS} \
+   --output ${IGconf_image_outputdir} \
    --target ${WORKROOT}/rootfs
 
 
@@ -142,6 +141,7 @@ POST_BUILD_VARS=(
    IGconf_image_layout
    IGconf_image_name
    IGconf_image_suffix
+   IGconf_image_outputdir
    IGconf_image_deploydir
 )
 ENV_POST_BUILD=()
@@ -220,7 +220,7 @@ for f in "${WORKROOT}"/genimage*.cfg; do
       --rootpath ${WORKROOT}/rootfs \
       --tmppath $GTMP \
       --inputpath ${WORKROOT}   \
-      --outputpath ${ARTEFACTS} \
+      --outputpath ${IGconf_image_outputdir} \
       --loglevel=10 \
       --config $f
 done
