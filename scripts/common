@@ -1,7 +1,39 @@
+msg() {
+   date +"[%T] $*"
+}
+export -f msg
+
+
 log (){
-	date +"[%T] $*" | tee -a "${LOG_FILE}"
+  msg "$*" | tee -a "${LOG_FILE}"
 }
 export -f log
+
+
+err (){
+   >&2 msg "$*"
+}
+export -f err
+
+
+die (){
+   err "$*"
+   exit 1
+}
+export -f die
+
+
+run()
+{
+   env "$@"
+   _ret=$?
+   if [[ $_ret -ne 0 ]]
+   then
+      die "Error: ["$@"] ($_ret)"
+   fi
+}
+export -f run
+
 
 bootstrap(){
 	local BOOTSTRAP_CMD=debootstrap
@@ -158,21 +190,49 @@ ensure_loopdev_partitions() {
 }
 export -f ensure_loopdev_partitions
 
+
+# .ini file section parser reading key value pairs into the env as shell variables.
+# key names will be prefixed with section name and converted to lower case, e.g.
+#
+# [mysection]
+# foo=zzz
+# BAR=yyy
+#
+# will yield:
+# IGconf_mysection_foo=zzz
+# IGconf_mysection_bar=yyy
+#
 read_config_section() {
    local section=$1
    local cfg=$2
    local attrs=$(crudini --get --format=sh $cfg $section)
    if [ $? -eq 0 ] ; then
       while IFS="=" read -r key value ; do
-         eval IGconf_"${section}"_"${key}"="$value"
+         [[ "$key" =~ ^#.*$ ]] && continue
+         [[ "$key" =~ ^$ ]] && continue
+         if [[ ! -n "$value" ]] ; then
+            eval unset IGconf_"${section,,}"_"${key,,}"
+         else
+            eval IGconf_"${section,,}"_"${key,,}"="$value"
+         fi
       done < <(printf '%s\n' "$attrs")
    fi
 }
 export -f read_config_section
 
 
+# shell variable list parser reading key value pairs into the env. key names
+# will be prefixed and converted to lower case, e.g.
+#
+# foo=zzz
+# BAR=yyy
+#
+# will yield:
+# IGconf_foo=zzz
+# IGconf_bar=yyy
+#
 read_options() {
-   if [ -s "$1" ] ; then
+   if [[ $# -eq 1 && -f $1 ]] ; then
       local attrs=$(cat $1)
    else
       local attrs=$(cat)
@@ -180,8 +240,11 @@ read_options() {
    while IFS="=" read -r key value ; do
       [[ "$key" =~ ^#.*$ ]] && continue
       [[ "$key" =~ ^$ ]] && continue
-      [[ "$value" =~ ^$ ]] && continue
-      eval IGopt_"${key}"="$value"
+      if [[ "$value" =~ ^$ ]] ; then
+         eval unset IGconf_"${key,,}"
+      else
+         eval IGconf_"${key,,}"="$value"
+      fi
    done < <(printf '%s\n' "$attrs")
 }
 export -f read_options

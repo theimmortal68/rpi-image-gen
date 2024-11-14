@@ -1,9 +1,11 @@
-# pi-gen examples
+# rpi-image-gen examples
 
-A collection of examples to demonstrate pi-gen and to help jump-start projects.
+A collection of examples to demonstrate rpi-image-gen and to help jump-start projects.
 
-To use, invoke pi-gen from the top level specifying the example config fragment, eg:
+To use, invoke rpi-image-gen specifying the example directory along with other applicable attributes. Please refer to the README in each examples directory for further details.
+
+Build a default system specifying particular options:
 
 ```bash
-sudo ./build.sh -c examples/min64/config
+./build.sh -o examples/setoptions/my.options
 ```

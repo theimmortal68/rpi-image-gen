@@ -1,0 +1,7 @@
+# Comments are supported
+TARGET_HOSTNAME=frobulator
+# All variables will be translated to lower case and made available to hooks
+first_user_name=pilot
+FIRST_USER_PASS=removeme
+# Variables set in the .cfg file can be overridden
+IMAGE_NAME=mydevice

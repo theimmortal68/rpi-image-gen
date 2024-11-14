@@ -6,26 +6,37 @@
 # named for the tool (i.e., qemu-user-static).
 dependencies_check()
 {
-	local depfile deps missing
+	local depfile deps missing=() op=$1
+
+	if [[ "$op" == install ]] ; then
+		shift 1
+	fi
 
 	for depfile in "$@"; do
 		if [[ -e "$depfile" ]]; then
-			deps="$(sed -f "${SCRIPT_DIR}/remove-comments.sed" < "${BASE_DIR}/depends")"
+			deps="$(sed -f "${IGTOP}/scripts/remove-comments.sed" < "${IGTOP}/depends")"
 
 		fi
 		for dep in $deps; do
 			if ! hash "${dep%:*}" 2>/dev/null; then
-				missing="${missing:+$missing }${dep#*:}"
+				missing+=("${dep#*:}")
 			fi
 		done
 	done
 
-	if [[ "$missing" ]]; then
+	if [[ "${missing[@]}" ]]; then
 		echo "Required dependencies not installed"
 		echo
 		echo "This can be resolved on Debian/Raspbian systems by installing:"
-		echo "$missing"
+		echo "${missing[@]}"
+		echo
+		echo "Script install_deps.sh can be used for this purpose."
+		echo
 		false
+
+		if [[ "$op" == install ]] ; then
+			apt install -y "${missing[@]}"
+		fi
 	fi
 
     # If we're building on a native arm platform, we don't need to check for
@@ -50,4 +61,13 @@ dependencies_check()
 			exit 1
 		fi
 	fi
+}
+
+
+dependencies_install()
+{
+	if [ "$(id -u)" != "0" ]; then
+		>&2 echo "Please run as root to install dependencies."; exit 1
+	fi
+	dependencies_check install "$@"
 }
