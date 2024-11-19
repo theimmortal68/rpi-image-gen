@@ -120,6 +120,11 @@ unset IGconf_ext_dir
 unset IGconf_ext_nsdir
 
 
+# Provide external directory paths
+[[ -d $EXT_DIR ]] && IGconf_ext_dir="$EXT_DIR"
+[[ -d $EXT_NSDIR ]] && IGconf_ext_nsdir="$EXT_NSDIR"
+
+
 read_config_section image "${IGTOP_CONFIG}/${INCONFIG}.cfg"
 read_config_section system "${IGTOP_CONFIG}/${INCONFIG}.cfg"
 read_config_section target "${IGTOP_CONFIG}/${INCONFIG}.cfg"
@@ -150,11 +155,6 @@ done
 
 # Load options
 [[ -s "$INOPTIONS" ]] && read_options "$INOPTIONS"
-
-
-# Provide external directory paths
-[[ -d $EXT_DIR ]] && IGconf_ext_dir="$EXT_DIR"
-[[ -d $EXT_NSDIR ]] && IGconf_ext_nsdir="$EXT_NSDIR"
 
 
 # Remaining defaults
