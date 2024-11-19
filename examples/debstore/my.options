@@ -1,0 +1,3 @@
+first_user_pass=removeme
+# Location of our debs
+debstore=${IGconf_ext_dir}/pkgs
