@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -eu
+
+# Always make sure all initramfs are updated
+if [ -s $1/etc/initramfs-tools/update-initramfs.conf ] ; then
+   cp $1/etc/initramfs-tools/update-initramfs.conf $1/etc/initramfs-tools/update-initramfs.conf.bak
+   sed -i 's/^update_initramfs=.*/update_initramfs=all/' $1/etc/initramfs-tools/update-initramfs.conf
+   chroot $1 update-initramfs -u
+   mv -f $1/etc/initramfs-tools/update-initramfs.conf.bak $1/etc/initramfs-tools/update-initramfs.conf
+fi
