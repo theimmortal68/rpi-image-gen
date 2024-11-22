@@ -3,7 +3,7 @@
 # install third-party packages using apt.
 
 debian/bookworm/arm64/base-apt-multi
-rpi/bookworm/arm64/apt
+rpi/debian/bookworm/apt
 rpi/misc-utils
 rpi/base/essential
 rpi/boot-firmware
