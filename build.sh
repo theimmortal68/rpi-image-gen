@@ -52,14 +52,14 @@ while getopts "c:D:hN:o:" flag ; do
          ;;
       D)
          EXT_DIR=$(realpath -m "$OPTARG")
-         [[ -d $EXT_DIR ]] || (usage ; die "Invalid external directory: $EXT_DIR")
+         [[ -d $EXT_DIR ]] || { usage ; die "Invalid external directory: $EXT_DIR" ; }
          ;;
       N)
          EXT_NS="$OPTARG"
          ;;
       o)
          INOPTIONS=$(realpath -m "$OPTARG")
-         [[ -s $INOPTIONS ]] || (usage ; die "Invalid options file: $INOPTIONS")
+         [[ -s $INOPTIONS ]] || { usage ; die "Invalid options file: $INOPTIONS" ; }
          ;;
       ?|*)
          usage ; exit 1
