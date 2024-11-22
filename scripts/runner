@@ -1,0 +1,25 @@
+#!/bin/bash
+
+set -u
+
+case "$1" in
+   setup|extract|essential|customize|cleanup)
+      # Execute scripts in $2 that start with “setup”, “extract”, etc
+      dir=$(realpath -m "$2")
+      [[ -d "$dir" ]] || {>&2 echo runner: invalid dir $dir ; exit 1;}
+      scripts=("${dir}/${1}"*)
+      shift 2
+      for s in "${scripts[@]}" ; do
+         if [ -x "$s" ] ; then
+            sh "$s" "$@"
+            err=$?
+            if [ $err -ne 0 ] ; then
+               >&2 echo "runner: $s error ($err)"
+               exit $err
+            fi
+         fi
+      done
+      ;;
+   *)
+      ;;
+esac
