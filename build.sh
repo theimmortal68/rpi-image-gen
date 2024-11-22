@@ -215,7 +215,11 @@ run podman unshare bdebstrap \
    --name "$IGconf_image_name" \
    --hostname "$IGconf_target_hostname" \
    --output "$IGconf_image_outputdir" \
-   --target "${IGconf_work_dir}/rootfs"
+   --target "${IGconf_work_dir}/rootfs" \
+   --setup-hook '$IGTOP/scripts/runner setup $IGTOP/scripts/bdebstrap "${IGconf_work_dir}/rootfs"' \
+   --essential-hook '$IGTOP/scripts/runner essential $IGTOP/scripts/bdebstrap "${IGconf_work_dir}/rootfs"' \
+   --customize-hook '$IGTOP/scripts/runner customize $IGTOP/scripts/bdebstrap "${IGconf_work_dir}/rootfs"' \
+   --cleanup-hook '$IGTOP/scripts/runner cleanup $IGTOP/scripts/bdebstrap "${IGconf_work_dir}/rootfs"'
 
 
 # hook execution
