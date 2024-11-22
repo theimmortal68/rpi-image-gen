@@ -5,6 +5,6 @@ mmdebstrap:
     - deb [signed-by=/usr/share/keyrings/raspberrypi-archive-stable.gpg] http://archive.raspberrypi.com/debian bookworm main
   setup-hooks:
     - mkdir -p $1/etc/apt/trusted.gpg.d
-    - cat keydir/raspberrypi.gpg.key | gpg --dearmor > $1/etc/apt/trusted.gpg.d/raspberrypi-archive-stable.gpg
+    - cat ${IGTOP}/keydir/raspberrypi.gpg.key | gpg --dearmor > $1/etc/apt/trusted.gpg.d/raspberrypi-archive-stable.gpg
   packages:
     - raspberrypi-archive-keyring

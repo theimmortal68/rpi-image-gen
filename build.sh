@@ -186,6 +186,7 @@ for v in $(compgen -A variable -X '!IGconf*') ; do
          ;;
    esac
 done
+ENV_ROOTFS+=('--env' IGTOP=$IGTOP)
 ENV_ROOTFS+=('--env' META_HOOKS=$META_HOOKS)
 ENV_ROOTFS+=('--env' RPI_TEMPLATES=$RPI_TEMPLATES)
 
