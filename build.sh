@@ -40,7 +40,7 @@ EXT_NS=
 EXT_NSDIR=
 EXT_NSMETA=
 INOPTIONS=
-INCONFIG=generic64-apt-ab
+INCONFIG=generic64-apt-simple
 
 while getopts "c:D:hN:o:" flag ; do
    case "$flag" in
