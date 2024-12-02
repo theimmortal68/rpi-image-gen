@@ -29,6 +29,9 @@ Options:
                    key=value. These variables can override the defaults, those
                    set by the config file, or provide completely new variables
                    available to both rootfs and image generation stages.
+  Developer Options
+  [-r]             Establish configuration, build rootfs, exit before post-build.
+  [-i]             Establish configuration, skip rootfs, run hooks, generate image.
 EOF
 }
 
@@ -41,8 +44,10 @@ EXT_NSDIR=
 EXT_NSMETA=
 INOPTIONS=
 INCONFIG=generic64-apt-simple
+ONLY_ROOTFS=0
+ONLY_IMAGE=0
 
-while getopts "c:D:hN:o:" flag ; do
+while getopts "c:D:hiN:o:r" flag ; do
    case "$flag" in
       c)
          INCONFIG="$OPTARG"
@@ -54,12 +59,18 @@ while getopts "c:D:hN:o:" flag ; do
          EXT_DIR=$(realpath -m "$OPTARG")
          [[ -d $EXT_DIR ]] || { usage ; die "Invalid external directory: $EXT_DIR" ; }
          ;;
+      i)
+         ONLY_IMAGE=1
+         ;;
       N)
          EXT_NS="$OPTARG"
          ;;
       o)
          INOPTIONS=$(realpath -m "$OPTARG")
          [[ -s $INOPTIONS ]] || { usage ; die "Invalid options file: $INOPTIONS" ; }
+         ;;
+      r)
+         ONLY_ROOTFS=1
          ;;
       ?|*)
          usage ; exit 1
@@ -218,7 +229,7 @@ done < "${IGPROFILE}"
 
 
 # Generate rootfs
-run podman unshare bdebstrap \
+[[ $ONLY_IMAGE = 1 ]] && true || run podman unshare bdebstrap \
    "${ARGS_LAYERS[@]}" \
    "${ENV_ROOTFS[@]}" \
    --name "$IGconf_image_name" \
@@ -230,6 +241,7 @@ run podman unshare bdebstrap \
    --customize-hook '$IGTOP/scripts/runner customize $IGTOP/scripts/bdebstrap "${IGconf_work_dir}/rootfs"' \
    --cleanup-hook '$IGTOP/scripts/runner cleanup $IGTOP/scripts/bdebstrap "${IGconf_work_dir}/rootfs"'
 
+[[ $ONLY_ROOTFS = 1 ]] && exit $?
 
 # hook execution
 runh()
