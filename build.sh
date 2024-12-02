@@ -6,7 +6,7 @@ IGTOP=$(readlink -f "$(dirname "$0")")
 
 source "${IGTOP}/scripts/common"
 source "${IGTOP}/scripts/dependencies_check"
-dependencies_check "${IGTOP}/depends"
+dependencies_check "${IGTOP}/depends" || exit 1
 
 
 usage()

@@ -14,12 +14,13 @@ dependencies_check()
 
 	for depfile in "$@"; do
 		if [[ -e "$depfile" ]]; then
-			deps="$(sed -f "${IGTOP}/scripts/remove-comments.sed" < "${IGTOP}/depends")"
-
+			deps="$(sed -f "${IGTOP}/scripts/remove-comments.sed" < "$depfile")"
 		fi
 		for dep in $deps; do
 			if ! hash "${dep%:*}" 2>/dev/null; then
-				missing+=("${dep#*:}")
+				if ! dpkg -s "${dep#*:}" > /dev/null 2>&1; then
+					missing+=("${dep#*:}")
+				fi
 			fi
 		done
 	done
@@ -32,10 +33,11 @@ dependencies_check()
 		echo
 		echo "Script install_deps.sh can be used for this purpose."
 		echo
-		false
 
 		if [[ "$op" == install ]] ; then
 			apt install -y "${missing[@]}"
+		else
+			exit 1
 		fi
 	fi
 
