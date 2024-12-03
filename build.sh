@@ -171,7 +171,7 @@ done
 # Remaining defaults
 : "${IGconf_work_dir:=${IGTOP}/work/${IGconf_image_name}}"
 : "${IGconf_image_outputdir:=${IGconf_work_dir}/artefacts}"
-: "${IGconf_image_deploydir:=${IGconf_image_outputdir}/deploy}"
+: "${IGconf_image_deploydir:=${IGconf_work_dir}/deploy}"
 
 
 # Assemble environment for rootfs and image creation, propagating all
@@ -280,9 +280,9 @@ fi
 
 # pre-image: hooks - board has priority over image layout
 if [ -x ${IGBOARD}/pre-image.sh ] ; then
-   runh ${IGBOARD}/pre-image.sh ${IGconf_work_dir}/rootfs ${IGconf_work_dir}
+   runh ${IGBOARD}/pre-image.sh ${IGconf_work_dir}/rootfs ${IGconf_image_outputdir}
 elif [ -x ${IGIMAGE}/pre-image.sh ] ; then
-   runh ${IGIMAGE}/pre-image.sh ${IGconf_work_dir}/rootfs ${IGconf_work_dir}
+   runh ${IGIMAGE}/pre-image.sh ${IGconf_work_dir}/rootfs ${IGconf_image_outputdir}
 else
    die "no pre-image hook"
 fi
@@ -294,11 +294,11 @@ mkdir -p "$IGconf_image_deploydir"
 
 
 # Generate image(s)
-for f in "${IGconf_work_dir}"/genimage*.cfg; do
+for f in "${IGconf_image_outputdir}"/genimage*.cfg; do
    run podman unshare genimage \
       --rootpath ${IGconf_work_dir}/rootfs \
       --tmppath $GTMP \
-      --inputpath ${IGconf_work_dir}   \
+      --inputpath ${IGconf_image_outputdir}   \
       --outputpath ${IGconf_image_outputdir} \
       --loglevel=10 \
       --config $f

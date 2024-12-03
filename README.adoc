@@ -22,10 +22,11 @@ The following terms are used throughout this document:
 
 *Image* Identifies the configuration used to create the target disk image file.
 
+*Layer* A single file of YAML metadata.
+
 *Meta* A directory containing YAML layers in a defined hierarchy.
 
 *Hook* A shell script that may be optional and which if found, will be run at a defined point in a particular flow of execution.
-
 
 == TL;DR
 
@@ -145,13 +146,13 @@ The intention is for rpi-image-gen to have parity with all of the options suppor
 
  * `WORK_DIR`  (Default: `<IGTOP>/work/<IMAGE_NAME>`)
 
-   Root directory in which rpi-image-gen constructs the target rootfs and generates image artefacts. Note, depending on the system being built, this directory can amount to a substantial amount of consumed disk space.
+   Root of the directory hierarchy containing rpi-image-gen output artefacts. Note, depending on the system being built, this directory can amount to a substantial amount of consumed disk space.
 
  * `IMAGE_OUTPUTDIR` (Default: `<WORK_DIR>/artefacts`)
 
    Location of all build product artefacts.
 
- * `IMAGE_DEPLOYDIR` (Default: `<IMAGE_OUTPUTDIR>/deploy`)
+ * `IMAGE_DEPLOYDIR` (Default: `<WORK_DIR>/deploy`)
 
    Location where final images and assets will be installed to.
 
@@ -372,6 +373,8 @@ mmdebstrap:
 After the chroot is successfully created (i.e. 'post-build'), file system overlays are applied (if present) before a number of hooks are run. These hooks provide additional integration points and provide a powerful way to perform custom operations on the chroot before image generation commences. One of hooks that runs at this point is the ```pre-image``` hook. Similar to bdebstrap invocation, every hook is invoked in an environment where all ```IGconf``` variables are available. Hooks are also invoked in the directory in which they exist, which means they can use relative paths to assets and sub-directories specific to their function.
 
 The ```pre-image``` hook is called by the core engine with defined arguments such as the path to the chroot, and the path to the genimage input directory. It is the responsibility of this hook to perform the tasks required to create the file(s) (i.e. the templates) in the genimage input directory so that genimage can process them to create the target image(s). Failure to generate a file(s) of the expected naming convention (```genimage*.cfg```), or to use syntax that renders the file(s) unable to be read by genimage, will result in an error and no target image will be generated. Please refer to the genimage documentation for usage information and examples of creation templates, parameters, etc.
+
+When invoking genimage, rpi-image-gen sets the value of ```--inputpath``` and ```--outputpath``` to the same location so that it's possible to reference one image from another. For example, image1 may be a squashfs image containing various assets that needs to be present on a file system in image2 so it can be mounted at boot.
 
 rpi-image-gen is again somewhat of a thin toolkit wrapper, this time leveraging genimage functionality with its documented arguments and parameters. Like bdebstrap, genimage is run via ```podman unshare``` which is necessary to enable file system creation utilities to incorporate correct and valid file system metadata from the chroot when creating the partition images, before assembling them into the final target image(s).
 
