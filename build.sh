@@ -129,6 +129,7 @@ IGconf_keyboard_layout="English (UK)"
 IGconf_timezone_default="Europe/London"
 unset IGconf_ext_dir
 unset IGconf_ext_nsdir
+unset IGconf_apt_keydir
 
 
 # Provide external directory paths
@@ -174,12 +175,22 @@ done
 : "${IGconf_image_deploydir:=${IGconf_work_dir}/deploy}"
 
 
-# Assemble environment for rootfs and image creation, propagating all
-# all IG variables to both stages. Others as appropriate.
+# Assemble keys
+if [[ -z ${IGconf_apt_keydir+z} ]] ; then
+   IGconf_apt_keydir="${IGconf_work_dir}/keys"
+   mkdir -p "$IGconf_apt_keydir"
+   [[ -d /usr/share/keyrings ]] && rsync -a /usr/share/keyrings/ $IGconf_apt_keydir
+   [[ -d "$USER/.local/share/keyrings" ]] && rsync -a "$USER/.local/share/keyrings/" $IGconf_apt_keydir
+   rsync -a "$IGTOP/keydir/" $IGconf_apt_keydir
+fi
+[[ -d $IGconf_apt_keydir ]] || die "apt keydir $IGconf_apt_keydir is invalid"
+
+
+# Assemble environment for rootfs and image creation, propagating IG variables
+# to rootfs and image stages as appropriate.
 ENV_ROOTFS=()
 ENV_IMAGE=()
 for v in $(compgen -A variable -X '!IGconf*') ; do
-   # Translate any legacy variables here
    case $v in
       IGconf_timezone_default)
          ENV_ROOTFS+=('--env' IGconf_timezone_area="${!v%%/*}")
@@ -192,6 +203,10 @@ for v in $(compgen -A variable -X '!IGconf*') ; do
          ENV_ROOTFS+=('--env' IGconf_apt_proxy_http="${!v}")
          ENV_IMAGE+=(IGconf_apt_proxy_http="${!v}")
          ;;
+      IGconf_apt_keydir)
+         ENV_ROOTFS+=('--aptopt' "Dir::Etc::TrustedParts ${!v}")
+         ENV_ROOTFS+=('--env' IGconf_apt_keydir="${!v}")
+         ;;
       *)
          ENV_ROOTFS+=('--env' ${v}="${!v}")
          ENV_IMAGE+=(${v}="${!v}")
@@ -203,7 +218,7 @@ ENV_ROOTFS+=('--env' META_HOOKS=$META_HOOKS)
 ENV_ROOTFS+=('--env' RPI_TEMPLATES=$RPI_TEMPLATES)
 
 
-# Validate dynamically set params
+# Validate proxy
 if [[ ! -z ${IGconf_apt_proxy_http+z} ]] ; then
   err=$(curl --head --silent --write-out "%{http_code}" --output /dev/null "$IGconf_apt_proxy_http")
   [[ $? -ne 0 ]] && die "unreachable : $IGconf_apt_proxy_http"

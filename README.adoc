@@ -164,6 +164,10 @@ The intention is for rpi-image-gen to have parity with all of the options suppor
 
    Path to an external directory namespace of where to search for addition meta layers. This is set automatically via the the command line.
 
+ * `APT_KEYDIR` (Default: `<WORK_DIR>/keys`)
+
+   If a particular collection of keys are required for bdebstrap to download packages from the mirror(s) provided, set the directory containing them here. This will be passed to bdebstrap via aptopt Dir::Etc::TrustedParts. If not specified, rpi-image-gen assembles the keys it requires into this directory. This particular setting of Dir::Etc::TrustedParts will not be included in the image. If using this option, please make sure to install your key(s) into the chroot explicitly if a key contained in this directory points to a location that is not otherwise populated during chroot creation (for example by installing a keyring package).
+
  * `APT_PROXY` (Default: unset)
 
    If you require the use of an apt proxy, set it here. This proxy setting will not be included in the image, making it safe to use an `apt-cacher` or similar package for development.
