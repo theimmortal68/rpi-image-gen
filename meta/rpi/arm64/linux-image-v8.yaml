@@ -1,6 +1,8 @@
 ---
 name: rpi-linux-v8
 mmdebstrap:
+  architectures:
+    - arm64
   packages:
     - initramfs-tools
     - linux-image-rpi-v8

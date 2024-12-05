@@ -1,6 +1,8 @@
 ---
 name: rpi-linux-2712
 mmdebstrap:
+  architectures:
+    - arm64
   packages:
     - initramfs-tools
     - linux-image-rpi-2712
