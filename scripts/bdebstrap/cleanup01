@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -eu
+
+# Remove the apt proxy if it was added
+if [ -s $1/etc/apt/apt.conf.d/99mmdebstrap ] ; then
+   if [[ ! -z ${IGconf_apt_proxy_http+z} ]] ; then
+      sed -i "\|Acquire\:\:http.*$IGconf_apt_proxy_http|d" $1/etc/apt/apt.conf.d/99mmdebstrap
+   fi
+fi

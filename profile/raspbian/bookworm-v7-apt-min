@@ -1,6 +1,5 @@
 # Minimal 32-bit native system with v7 kernel, apt, rpi utils and wired networking
 
-debian/apt-proxy
 raspbian/bookworm/base-apt
 rpi/debian/bookworm/apt
 rpi/misc-utils

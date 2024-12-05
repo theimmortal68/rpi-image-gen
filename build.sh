@@ -199,9 +199,14 @@ for v in $(compgen -A variable -X '!IGconf*') ; do
          ENV_IMAGE+=(IGconf_timezone_city="${!v##*/}")
          ;;
       IGconf_apt_proxy)
-         IGconf_apt_proxy_http="$IGconf_apt_proxy"
+         IGconf_apt_proxy_http="${!v}"
+         ;&
+      IGconf_apt_proxy_http)
+         err=$(curl --head --silent --write-out "%{http_code}" --output /dev/null "${!v}")
+         [[ $? -ne 0 ]] && die "unreachable proxy : ${!v}"
+         msg "$err ${!v}"
+         ENV_ROOTFS+=('--aptopt' "Acquire::http { Proxy \"${!v}\"; }")
          ENV_ROOTFS+=('--env' IGconf_apt_proxy_http="${!v}")
-         ENV_IMAGE+=(IGconf_apt_proxy_http="${!v}")
          ;;
       IGconf_apt_keydir)
          ENV_ROOTFS+=('--aptopt' "Dir::Etc::TrustedParts ${!v}")
@@ -216,14 +221,6 @@ done
 ENV_ROOTFS+=('--env' IGTOP=$IGTOP)
 ENV_ROOTFS+=('--env' META_HOOKS=$META_HOOKS)
 ENV_ROOTFS+=('--env' RPI_TEMPLATES=$RPI_TEMPLATES)
-
-
-# Validate proxy
-if [[ ! -z ${IGconf_apt_proxy_http+z} ]] ; then
-  err=$(curl --head --silent --write-out "%{http_code}" --output /dev/null "$IGconf_apt_proxy_http")
-  [[ $? -ne 0 ]] && die "unreachable : $IGconf_apt_proxy_http"
-  msg "$err $IGconf_apt_proxy_http"
-fi
 
 
 # Assemble meta layers from profile
