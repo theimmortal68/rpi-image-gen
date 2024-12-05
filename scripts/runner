@@ -11,7 +11,7 @@ case "$1" in
       shift 2
       for s in "${scripts[@]}" ; do
          if [ -x "$s" ] ; then
-            sh "$s" "$@"
+            bash "$s" "$@"
             err=$?
             if [ $err -ne 0 ] ; then
                >&2 echo "runner: $s error ($err)"
