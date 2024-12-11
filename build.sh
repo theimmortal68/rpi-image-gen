@@ -116,7 +116,8 @@ msg "Reading $INCONFIG from $IGTOP_CONFIG with options [$INOPTIONS]"
 
 # Defaults
 IGconf_target_board=pi5
-IGconf_image_name="${IGconf_target_board}-$(echo "${INCONFIG}"|sed -s 's|\/|\-|g')"
+IGconf_image_version=$(date +%Y-%m-%d)
+IGconf_image_name="${IGconf_target_board}-$(echo "${INCONFIG}"|sed -s 's|\/|\-|g')-${IGconf_image_version}"
 IGconf_image_suffix=img
 IGconf_image_compression=none
 unset IGconf_apt_proxy

@@ -9,8 +9,3 @@ if [ -s $1/etc/initramfs-tools/update-initramfs.conf ] ; then
    chroot $1 update-initramfs -u
    mv -f $1/etc/initramfs-tools/update-initramfs.conf.bak $1/etc/initramfs-tools/update-initramfs.conf
 fi
-
-# The Dir::Etc::TrustedParts we inserted for keys was only valid for chroot creation
-#if [ -s $1/etc/apt/apt.conf.d/99mmdebstrap ] ; then
-#   sed -i "\|Dir\:\:Etc\:\:TrustedParts.*$IGconf_apt_keydir|d"  $1/etc/apt/apt.conf.d/99mmdebstrap
-#fi
