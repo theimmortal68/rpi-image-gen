@@ -126,13 +126,17 @@ Other sub-component directories exist for particular purposes and the path to so
 
 == Options
 
-The intention is for rpi-image-gen to have parity with all of the options supported by pi-gen, either as a 1-1 mapping or by functional equivalence. At the current time, this is not the case. The following options are supported. Please bear in mind that some options can be provided via the appropriate section in the Config file or via the Options file.
+The intention is for rpi-image-gen to have parity with all of the options supported by pi-gen, either as a 1-1 mapping or by functional equivalence. At the current time, this is not the case. The following options are supported and can be specified in the Options file or in the appropriate section of the Config file. Please note there is currently no support for reading them from the environment.
 
  * `TARGET_BOARD` (Default: `pi5`)
 
    The name of the board to build for.
 
- * `IMAGE_NAME` (Default: `<TARGET_BOARD>-<config name>`)
+ * `IMAGE_VERSION` (Default: `Today's date represented as YYYY-MM-DD`)
+
+   Version string of the image to build.
+
+ * `IMAGE_NAME` (Default: `<TARGET_BOARD>-<config name>-<IMAGE_VERSION>`)
 
    The basename of the image to build.
 
