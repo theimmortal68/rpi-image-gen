@@ -95,6 +95,7 @@ IGTOP_CONFIG="${IGTOP}/config"
 IGTOP_BOARD="${IGTOP}/board"
 IGTOP_IMAGE="${IGTOP}/image"
 IGTOP_PROFILE="${IGTOP}/profile"
+IGTOP_SBOM="${IGTOP}/sbom"
 META="${IGTOP}/meta"
 META_HOOKS="${IGTOP}/meta-hooks"
 RPI_TEMPLATES="${IGTOP}/templates/rpi"
@@ -131,6 +132,7 @@ IGconf_timezone_default="Europe/London"
 unset IGconf_ext_dir
 unset IGconf_ext_nsdir
 unset IGconf_apt_keydir
+IGconf_sbom_output_format="spdx-json"
 
 
 # Provide external directory paths
@@ -141,6 +143,7 @@ unset IGconf_apt_keydir
 read_config_section image "${IGTOP_CONFIG}/${INCONFIG}.cfg"
 read_config_section system "${IGTOP_CONFIG}/${INCONFIG}.cfg"
 read_config_section target "${IGTOP_CONFIG}/${INCONFIG}.cfg"
+read_config_section sbom "${IGTOP_CONFIG}/${INCONFIG}.cfg"
 
 
 # Config must provide
@@ -224,6 +227,11 @@ ENV_ROOTFS+=('--env' META_HOOKS=$META_HOOKS)
 ENV_ROOTFS+=('--env' RPI_TEMPLATES=$RPI_TEMPLATES)
 
 
+# If needed, hooks can install to here. This location will take precedence in their PATH.
+mkdir -p ${IGconf_work_dir}/host/bin
+ENV_IMAGE+=(PATH="${IGconf_work_dir}/host/bin:${PATH}")
+
+
 # Assemble meta layers from profile
 ARGS_LAYERS=()
 while read -r line; do
@@ -256,6 +264,7 @@ done < "${IGPROFILE}"
 
 [[ $ONLY_ROOTFS = 1 ]] && exit $?
 
+
 # hook execution
 runh()
 {
@@ -270,7 +279,6 @@ runh()
       die "Hook Error: ["$hookdir"/"$hook"] ($ret)"
    fi
 }
-
 
 
 # post-build: apply rootfs overlays - image layout then board
@@ -298,6 +306,12 @@ elif [ -x ${IGIMAGE}/pre-image.sh ] ; then
    runh ${IGIMAGE}/pre-image.sh ${IGconf_work_dir}/rootfs ${IGconf_image_outputdir}
 else
    die "no pre-image hook"
+fi
+
+
+# SBOM
+if [ -x ${IGTOP_SBOM}/gen.sh ] ; then
+   runh ${IGTOP_SBOM}/gen.sh ${IGconf_work_dir}/rootfs ${IGconf_image_outputdir}
 fi
 
 
