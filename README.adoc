@@ -474,4 +474,4 @@ Only one of these hooks is executed. The board pre-image hook has priority. If i
 
    Image layout owned post-image operations.
 
-Only one of these hooks is executed. The board post-image hook has priority. If it exists, it will be executed, else the image layout post-image hook will be executed.
+Only one of these hooks is executed. The board post-image hook has priority. If it exists, it will be executed. If it doesn't and the image layout post-image hook exists, that will be executed. If neither exist, a default post-image hook will be executed. It is the responsibility of the post-image hook to perform all operations required to deploy artefacts to ```IMAGE_DEPLOYDIR``` (```IGconf_image_deploy_dir```), for example compressing image and SBOM.

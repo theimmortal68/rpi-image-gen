@@ -338,5 +338,5 @@ if [ -x ${IGBOARD}/post-image.sh ] ; then
 elif [ -x ${IGIMAGE}/post-image.sh ] ; then
    runh ${IGIMAGE}/post-image.sh $IGconf_image_deploydir
 else
-   :
+   runh ${IGTOP_IMAGE}/post-image.sh $IGconf_image_deploydir
 fi
