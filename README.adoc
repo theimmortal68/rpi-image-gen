@@ -8,7 +8,7 @@ rpi-image-gen is a tool used to create custom software images for Raspberry Pi d
 
 == Terminology
 
-The following terms are used throughout this document:
+The following terms are used in this document:
 
 *Host* The machine on which rpi-image-gen is executing. Analogous to GNU Build.
 
@@ -27,6 +27,10 @@ The following terms are used throughout this document:
 *Meta* A directory containing YAML layers in a defined hierarchy.
 
 *Hook* A shell script that may be optional and which if found, will be run at a defined point in a particular flow of execution.
+
+*SBOM* Software Bill Of Materials
+
+*CVE* Common Vulnerabilities and Exposures
 
 == TL;DR
 
@@ -224,6 +228,10 @@ The intention is for rpi-image-gen to have parity with all of the options suppor
 
    Password for the first user. If unset, the account is locked.
 
+ * `SBOM_OUTPUT_FORMAT` (Default: spdx-json)
+
+   The output format of the SBOM.
+
 
 == Execution Flow
 
@@ -374,6 +382,33 @@ mmdebstrap:
     - base-files
     - base-passwd
     - debianutils
+----
+
+=== SBOM
+
+A SBOM should be a reproducible and immutable artefact of the build. Generation of it takes place at the end of the post-build stage after all other hooks have run, and immediately before ```genimage``` invocation. It is not advised to perform any operation on the rootfs that could affect the data encapsulated by the SBOM after it has been generated. The SBOM is generated using ```syft``` (https://github.com/anchore/syft) which will be downloaded if not installed on the host. The SBOM is written to the image output directory (```IGconf_image_outputdir```) and its output format is configurable via the ```SBOM_OUTPUT_FORMAT``` variable which can be set via the Config or Options file. The output format is currently the only option available to the user.
+
+For example, these are equivalent: +
+
+Config
+
+----
+[sbom]
+output_format=cyclonedx-json
+----
+
+Options
+
+----
+SBOM_OUTPUT_FORMAT=cyclonedx-json
+----
+
+The value of ```IGconf_sbom_output_format``` is passed directly to syft. Please refer to the syft documentation for the supported output formats. Nothing in the rootfs is excluded from the SBOM scan. syft is invoked via ```podman unshare``` so it can execute with the same privileges as bdebstrap did when the rootfs was created.
+
+Utilisation of the SBOM is beyond the scope of this document. However, the following is offered as an example of how the SBOM could be used to generate a report of known CVEs using grype (https://github.com/anchore/grype):
+
+----
+$ grype --by-cve sbom:./work/deb12-arm64-min/artefacts/deb12-arm64-min.sbom -o json > vulnerabilities.json
 ----
 
 === Image Generation
