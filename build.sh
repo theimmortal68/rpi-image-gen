@@ -191,16 +191,16 @@ fi
 
 
 # Assemble environment for rootfs and image creation, propagating IG variables
-# to rootfs and image stages as appropriate.
+# to rootfs and post-build stages as appropriate.
 ENV_ROOTFS=()
-ENV_IMAGE=()
+ENV_POST_BUILD=()
 for v in $(compgen -A variable -X '!IGconf*') ; do
    case $v in
       IGconf_timezone_default)
          ENV_ROOTFS+=('--env' IGconf_timezone_area="${!v%%/*}")
          ENV_ROOTFS+=('--env' IGconf_timezone_city="${!v##*/}")
-         ENV_IMAGE+=(IGconf_timezone_area="${!v%%/*}")
-         ENV_IMAGE+=(IGconf_timezone_city="${!v##*/}")
+         ENV_POST_BUILD+=(IGconf_timezone_area="${!v%%/*}")
+         ENV_POST_BUILD+=(IGconf_timezone_city="${!v##*/}")
          ;;
       IGconf_apt_proxy)
          IGconf_apt_proxy_http="${!v}"
@@ -218,7 +218,7 @@ for v in $(compgen -A variable -X '!IGconf*') ; do
          ;;
       *)
          ENV_ROOTFS+=('--env' ${v}="${!v}")
-         ENV_IMAGE+=(${v}="${!v}")
+         ENV_POST_BUILD+=(${v}="${!v}")
          ;;
    esac
 done
@@ -226,10 +226,14 @@ ENV_ROOTFS+=('--env' IGTOP=$IGTOP)
 ENV_ROOTFS+=('--env' META_HOOKS=$META_HOOKS)
 ENV_ROOTFS+=('--env' RPI_TEMPLATES=$RPI_TEMPLATES)
 
+for i in IGBOARD IGIMAGE IGPROFILE ; do
+   ENV_POST_BUILD+=(${i}="${!i}")
+done
+
 
 # If needed, hooks can install to here. This location will take precedence in their PATH.
 mkdir -p ${IGconf_work_dir}/host/bin
-ENV_IMAGE+=(PATH="${IGconf_work_dir}/host/bin:${PATH}")
+ENV_POST_BUILD+=(PATH="${IGconf_work_dir}/host/bin:${PATH}")
 
 
 # Assemble meta layers from profile
@@ -272,7 +276,7 @@ runh()
    local hook=$(basename "$1")
    shift 1
    msg "$hookdir"["$hook"] "$@"
-   env -C $hookdir "${ENV_IMAGE[@]}" ./"$hook" "$@"
+   env -C $hookdir "${ENV_POST_BUILD[@]}" ./"$hook" "$@"
    ret=$?
    if [[ $ret -ne 0 ]]
    then
@@ -322,7 +326,7 @@ mkdir -p "$IGconf_image_deploydir"
 
 # Generate image(s)
 for f in "${IGconf_image_outputdir}"/genimage*.cfg; do
-   run podman unshare genimage \
+   run podman unshare env "${ENV_POST_BUILD[@]}" genimage \
       --rootpath ${IGconf_work_dir}/rootfs \
       --tmppath $GTMP \
       --inputpath ${IGconf_image_outputdir}   \
