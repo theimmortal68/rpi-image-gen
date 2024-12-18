@@ -1,3 +1,9 @@
+image <IMAGE_DIR>/<IMAGE_NAME>.<IMAGE_SUFFIX>.sparse {
+   android-sparse {
+      image = <IMAGE_DIR>/<IMAGE_NAME>.<IMAGE_SUFFIX>
+   }
+}
+
 image <IMAGE_DIR>/<IMAGE_NAME>.<IMAGE_SUFFIX> {
    hdimage {
       partition-table-type = "gpt"
@@ -42,12 +48,6 @@ image <IMAGE_DIR>/<IMAGE_NAME>.<IMAGE_SUFFIX> {
       partition-type-uuid = L
    }
 }
-
-#image <IMAGE_DIR>/<IMAGE_NAME>-sparse.<IMAGE_SUFFIX> {
-#   android-sparse {
-#        image = <IMAGE_DIR>/<IMAGE_NAME>.<IMAGE_SUFFIX>
-#    }
-#}
 
 image config.vfat {
    vfat {

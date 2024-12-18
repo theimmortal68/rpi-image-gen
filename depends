@@ -27,3 +27,4 @@ bdebstrap
 podman
 crudini
 zstd
+pv

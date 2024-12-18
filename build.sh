@@ -331,8 +331,8 @@ for f in "${IGconf_image_outputdir}"/genimage*.cfg; do
       --tmppath $GTMP \
       --inputpath ${IGconf_image_outputdir}   \
       --outputpath ${IGconf_image_outputdir} \
-      --loglevel=10 \
-      --config $f
+      --loglevel=1 \
+      --config $f | pv -t -F 'Generating image...%t' || die "genimage error"
 done
 
 
