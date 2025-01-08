@@ -5,18 +5,15 @@ set -eu
 rootfs=$1
 genimg_in=$2
 
-# Generate the config for genimage to ingest:
-# FIXME - sizes should be easily configurable
-FW_SIZE=200%
-ROOT_SIZE=300%
-
-SETUP=$(readlink -f setup.sh)
+: "${IGconf_image_boot_part_size:=100%}"
+: "${IGconf_image_root_part_size:=100%}"
 
 cat genimage.cfg.in | sed \
    -e "s|<IMAGE_DIR>|$IGconf_image_outputdir|g" \
    -e "s|<IMAGE_NAME>|$IGconf_image_name|g" \
    -e "s|<IMAGE_SUFFIX>|$IGconf_image_suffix|g" \
-   -e "s|<FW_SIZE>|$FW_SIZE|g" \
-   -e "s|<ROOT_SIZE>|$ROOT_SIZE|g" \
-   -e "s|<SETUP>|'$SETUP'|g" \
+   -e "s|<FW_SIZE>|$IGconf_image_boot_part_size|g" \
+   -e "s|<ROOT_SIZE>|$IGconf_image_root_part_size|g" \
+   -e "s|<SETUP>|'$(readlink -ef setup.sh)'|g" \
+   -e "s|<MKE2FSCONF>|'$(readlink -ef mke2fs.conf)'|g" \
    > ${genimg_in}/genimage.cfg

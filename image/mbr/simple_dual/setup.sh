@@ -1,6 +1,6 @@
-#!/bin/bash -e
+#!/bin/bash
 
-set -u
+set -eu
 
 DISKLABEL=$1
 
