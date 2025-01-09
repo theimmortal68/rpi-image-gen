@@ -30,7 +30,7 @@ Options:
                    set by the config file, or provide completely new variables
                    available to both rootfs and image generation stages.
   Developer Options
-  [-r]             Establish configuration, build rootfs, exit before post-build.
+  [-r]             Establish configuration, build rootfs, exit after post-build.
   [-i]             Establish configuration, skip rootfs, run hooks, generate image.
 EOF
 }
@@ -263,8 +263,6 @@ done < "${IGPROFILE}"
    --customize-hook '$IGTOP/scripts/runner customize $IGTOP/scripts/bdebstrap "${IGconf_work_dir}/rootfs"' \
    --cleanup-hook '$IGTOP/scripts/runner cleanup $IGTOP/scripts/bdebstrap "${IGconf_work_dir}/rootfs"'
 
-[[ $ONLY_ROOTFS = 1 ]] && exit $?
-
 
 # hook execution
 runh()
@@ -298,6 +296,9 @@ fi
 if [ -x ${IGBOARD}/post-build.sh ] ; then
    runh ${IGBOARD}/post-build.sh ${IGconf_work_dir}/rootfs
 fi
+
+
+[[ $ONLY_ROOTFS = 1 ]] && exit $?
 
 
 # pre-image: hooks - board has priority over image layout
