@@ -248,7 +248,9 @@ Before commencing creation of the rootfs, the configuration of the system is ass
 The config file uses .ini file syntax (https://en.wikipedia.org/wiki/INI_file) to set ```key=value``` pairs. +
 The options file is a shell fragment containing ```key=value``` pairs.
 
-rpi-image-gen adopts a system-wide prefix for all variables it exposes to YAML layers and hooks. The prefix is ```IGconf```. In addition, when reading the config file, a variable declared in a section has the section name included in its prefix when it's translated. Sections not specifically read will be ignored. Variables set from the options file will be prefixed and translated as-is. Translation includes the variable name being converted to lower case. +
+rpi-image-gen adopts a system-wide prefix for all variables it exposes to YAML layers and hooks. The prefix is ```IGconf```. In addition, when reading the config file, a variable declared in a section has the section name included in its prefix when it's translated. Sections not specifically read will be ignored. Variables set from the options file will be prefixed and translated as-is. Translation includes the variable name being converted to lower case.
+
+Understanding how to set and create variables is an important part of using rpi-image-gen because it forms the foundation of user customisation.
 
 ==== Example
 These are equivalent: +
@@ -336,7 +338,40 @@ IGconf_system_debug_port=8080
 IGconf_system_debug_user=pi
 ----
 
-Understanding how to set and create variables is an important part of using rpi-image-gen because it forms the foundation of user customisation.
+[TIP]
+--
+It's possible to include a Config file from another Config file provided both exist in the same directory. This may be useful in cases where there is a common configuration shared across devices. Rather than duplicating parts of a Config file in others, a common configuration can be included and any overrides or additional settings applied afterwards.
+--
+
+==== Example
+
+Common configuration fragment ```base.cfg```
+
+----
+[target]
+board=edge01
+
+[image]
+layout=ROTA
+default_slot=A
+
+[system]
+profile=v1
+safe_boot=y
+boot_scheme=2
+----
+
+A developer may wish to use customisations provided by the layout
+
+----
+include base.cfg
+
+[image]
+resize=false
+appdata_size=1G
+----
+
+**Note:** Files must be included _outside_ a config section. Including files from the Options file is not supported.
 
 === Root File System Construction 
 

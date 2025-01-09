@@ -140,10 +140,7 @@ IGconf_sbom_output_format="spdx-json"
 [[ -d $EXT_NSDIR ]] && IGconf_ext_nsdir="$EXT_NSDIR"
 
 
-read_config_section image "${IGTOP_CONFIG}/${INCONFIG}.cfg"
-read_config_section system "${IGTOP_CONFIG}/${INCONFIG}.cfg"
-read_config_section target "${IGTOP_CONFIG}/${INCONFIG}.cfg"
-read_config_section sbom "${IGTOP_CONFIG}/${INCONFIG}.cfg"
+read_config "${IGTOP_CONFIG}/${INCONFIG}.cfg"
 
 
 # Config must provide

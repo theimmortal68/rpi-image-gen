@@ -221,6 +221,32 @@ read_config_section() {
 export -f read_config_section
 
 
+# Read a config file. Included config files will be read from the directory of
+# the current config file.
+read_config() {
+   local cfg=$(realpath -m "$1" 2>/dev/null)
+   test -s "$cfg" || die "Invalid config: $cfg"
+   while read -r w1 w2; do
+    [[ "$w1" =~ ^#.*$ ]] && continue
+    [[ "$w1" =~ ^$ ]] && continue
+    case $w1 in
+       include)
+         [[ $(basename $cfg) ==  $(basename $w2) ]] && die "Recursive include: $cfg"
+         read_config "$(dirname $cfg)/$w2"
+         ;;
+       *)
+         ;;
+    esac
+   done < "$cfg"
+
+   read_config_section image "$cfg"
+   read_config_section system "$cfg"
+   read_config_section target "$cfg"
+   read_config_section sbom "$cfg"
+}
+export -f read_config
+
+
 # shell variable list parser reading key value pairs into the env. key names
 # will be prefixed and converted to lower case, e.g.
 #
