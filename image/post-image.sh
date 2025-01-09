@@ -12,6 +12,8 @@ case ${IGconf_image_compression} in
       ;;
 esac
 
+shopt -s nullglob
+
 files=()
 files+=("${IGconf_image_outputdir}/${IGconf_image_name}"*.${IGconf_image_suffix})
 files+=("${IGconf_image_outputdir}/${IGconf_image_name}"*.${IGconf_image_suffix}.sparse)
