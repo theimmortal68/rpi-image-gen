@@ -2,22 +2,25 @@
 
 set -u
 
-case "$1" in
+op="$1"
+shift 1
+
+case "$op" in
    setup|extract|essential|customize|cleanup)
-      # Execute scripts in $2 that start with “setup”, “extract”, etc
-      dir=$(realpath -m "$2")
-      [[ -d "$dir" ]] || {>&2 echo runner: invalid dir $dir ; exit 1;}
-      scripts=("${dir}/${1}"*)
-      shift 2
-      for s in "${scripts[@]}" ; do
-         if [ -x "$s" ] ; then
-            bash "$s" "$@"
-            err=$?
-            if [ $err -ne 0 ] ; then
-               >&2 echo "runner: $s error ($err)"
-               exit $err
+      # Execute scripts from within these dirs that start with “setup”, “extract”, etc
+      for dir in ${IGTOP}/scripts/bdebstrap ${IGIMAGE}/bdebstrap ${IGBOARD}/bdebstrap ; do
+         [[ -d "$dir" ]] || continue
+         scripts=("${dir}/${op}"*)
+         for script in "${scripts[@]}" ; do
+            if [ -x "$script" ] ; then
+               env -C "$dir" bash "$(basename "$script")" "$@"
+               err=$?
+               if [ $err -ne 0 ] ; then
+                  >&2 echo "runner: $script error ($err)"
+                  exit $err
+               fi
             fi
-         fi
+         done
       done
       ;;
    *)

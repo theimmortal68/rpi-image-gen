@@ -224,6 +224,7 @@ ENV_ROOTFS+=('--env' META_HOOKS=$META_HOOKS)
 ENV_ROOTFS+=('--env' RPI_TEMPLATES=$RPI_TEMPLATES)
 
 for i in IGBOARD IGIMAGE IGPROFILE ; do
+   ENV_ROOTFS+=('--env' ${i}="${!i}")
    ENV_POST_BUILD+=(${i}="${!i}")
 done
 
@@ -258,10 +259,10 @@ done < "${IGPROFILE}"
    --hostname "$IGconf_target_hostname" \
    --output "$IGconf_image_outputdir" \
    --target "${IGconf_work_dir}/rootfs" \
-   --setup-hook '$IGTOP/scripts/runner setup $IGTOP/scripts/bdebstrap "${IGconf_work_dir}/rootfs"' \
-   --essential-hook '$IGTOP/scripts/runner essential $IGTOP/scripts/bdebstrap "${IGconf_work_dir}/rootfs"' \
-   --customize-hook '$IGTOP/scripts/runner customize $IGTOP/scripts/bdebstrap "${IGconf_work_dir}/rootfs"' \
-   --cleanup-hook '$IGTOP/scripts/runner cleanup $IGTOP/scripts/bdebstrap "${IGconf_work_dir}/rootfs"'
+   --setup-hook '$IGTOP/scripts/runner setup "${IGconf_work_dir}/rootfs"' \
+   --essential-hook '$IGTOP/scripts/runner essential "${IGconf_work_dir}/rootfs"' \
+   --customize-hook '$IGTOP/scripts/runner customize "${IGconf_work_dir}/rootfs"' \
+   --cleanup-hook '$IGTOP/scripts/runner cleanup "${IGconf_work_dir}/rootfs"'
 
 
 # hook execution

@@ -474,6 +474,10 @@ Overlays are applied in the order they are listed above.
 
 The hooks available for user customisation are documented below. If a hook is to be executed, it must have executable permissions for the user performing the build.
 
+=== bdebstrap
+
+rpi-image-gen extends the support of bdebstrap hooks to image and board directories. Hooks with filenames beginning with ```setup```,  ```essential```, ```customize``` and ```cleanup``` are supported and must exist in a sub-directory named```bdebstrap``` within the image or board directory in order for them to be run at the respective stage of chroot creation. Their file extension is ignored. Sub-directories are not traversed.
+
 === post-build
 
  * `<image dir>/post-build.sh` (Usage: optional) (Provided-by: image)
