@@ -266,6 +266,7 @@ done < "${IGPROFILE}"
 [[ $ONLY_IMAGE = 1 ]] && true || rund "$IGTOP" podman unshare bdebstrap \
    "${ARGS_LAYERS[@]}" \
    "${ENV_ROOTFS[@]}" \
+   --force \
    --name "$IGconf_image_name" \
    --hostname "$IGconf_target_hostname" \
    --output "$IGconf_image_outputdir" \
