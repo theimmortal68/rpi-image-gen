@@ -213,6 +213,16 @@ for v in $(compgen -A variable -X '!IGconf*') ; do
          ENV_ROOTFS+=('--aptopt' "Dir::Etc::TrustedParts ${!v}")
          ENV_ROOTFS+=('--env' IGconf_apt_keydir="${!v}")
          ;;
+      IGconf_ext_dir|IGconf_ext_nsdir )
+         ENV_ROOTFS+=('--env' ${v}="${!v}")
+         ENV_POST_BUILD+=(${v}="${!v}")
+         if [ -d "${!v}/bin" ] ; then
+            PATH="${!v}/bin:${PATH}"
+            ENV_ROOTFS+=('--env' PATH="$PATH")
+            ENV_POST_BUILD+=(PATH="${PATH}")
+         fi
+         ;;
+
       *)
          ENV_ROOTFS+=('--env' ${v}="${!v}")
          ENV_POST_BUILD+=(${v}="${!v}")
@@ -229,9 +239,10 @@ for i in IGBOARD IGIMAGE IGPROFILE ; do
 done
 
 
-# If needed, hooks can install to here. This location will take precedence in their PATH.
+# Final PATH setup
+ENV_ROOTFS+=('--env' PATH="${IGTOP}/bin:$PATH")
 mkdir -p ${IGconf_work_dir}/host/bin
-ENV_POST_BUILD+=(PATH="${IGconf_work_dir}/host/bin:${PATH}")
+ENV_POST_BUILD+=(PATH="${IGTOP}/bin:${IGconf_work_dir}/host/bin:${PATH}")
 
 
 # Assemble meta layers from profile
@@ -252,17 +263,17 @@ done < "${IGPROFILE}"
 
 
 # Generate rootfs
-[[ $ONLY_IMAGE = 1 ]] && true || run podman unshare bdebstrap \
+[[ $ONLY_IMAGE = 1 ]] && true || rund "$IGTOP" podman unshare bdebstrap \
    "${ARGS_LAYERS[@]}" \
    "${ENV_ROOTFS[@]}" \
    --name "$IGconf_image_name" \
    --hostname "$IGconf_target_hostname" \
    --output "$IGconf_image_outputdir" \
    --target "${IGconf_work_dir}/rootfs" \
-   --setup-hook '$IGTOP/scripts/runner setup "${IGconf_work_dir}/rootfs"' \
-   --essential-hook '$IGTOP/scripts/runner essential "${IGconf_work_dir}/rootfs"' \
-   --customize-hook '$IGTOP/scripts/runner customize "${IGconf_work_dir}/rootfs"' \
-   --cleanup-hook '$IGTOP/scripts/runner cleanup "${IGconf_work_dir}/rootfs"'
+   --setup-hook 'bin/runner setup "${IGconf_work_dir}/rootfs"' \
+   --essential-hook 'bin/runner essential "${IGconf_work_dir}/rootfs"' \
+   --customize-hook 'bin/runner customize "${IGconf_work_dir}/rootfs"' \
+   --cleanup-hook 'bin/runner cleanup "${IGconf_work_dir}/rootfs"'
 
 
 # hook execution
