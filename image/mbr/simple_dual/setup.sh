@@ -10,6 +10,7 @@ case $DISKLABEL in
 /dev/disk/by-label/ROOT /               ext4 rw,relatime,errors=remount-ro 0 1
 /dev/disk/by-label/BOOT /boot/firmware  vfat rw,noatime,fmask=0022,dmask=0022,codepage=437,iocharset=ascii,shortname=mixed,errors=remount-ro 0 2
 EOF
+      image2json -g $OUTPUTPATH/genimage.cfg -f $IMAGEMOUNTPATH/etc/fstab > $OUTPUTPATH/image.json
       ;;
    BOOT)
       sed -i "s|root=\([^ ]*\)|root=\/dev\/disk\/by-label\/ROOT|" $IMAGEMOUNTPATH/cmdline.txt
