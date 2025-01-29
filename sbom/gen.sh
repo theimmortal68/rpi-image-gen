@@ -5,7 +5,7 @@ set -eu
 rootfs=$1
 outdir=$2
 
-SYFT_VER=v1.18.0
+SYFT_VER=v1.19.0
 
 # If host has syft, use it
 if ! hash syft 2>/dev/null; then
