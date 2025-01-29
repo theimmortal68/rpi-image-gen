@@ -2,6 +2,16 @@
 
 set -eu
 
+# Install files
+if [ -d $1/etc/initramfs-tools ] ; then
+   for dir in ${IGIMAGE}/device/initramfs-tools \
+              ${IGBOARD}/device/initramfs-tools \
+              ../device/initramfs-tools ; do
+      [[ -d "$dir" ]] || continue
+      rsync --archive --ignore-existing "${dir}/" $1/etc/initramfs-tools
+   done
+fi
+
 # Always make sure all initramfs are updated
 if [ -s $1/etc/initramfs-tools/update-initramfs.conf ] ; then
    cp $1/etc/initramfs-tools/update-initramfs.conf $1/etc/initramfs-tools/update-initramfs.conf.bak

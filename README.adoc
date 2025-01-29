@@ -460,11 +460,11 @@ rpi-image-gen is again somewhat of a thin toolkit wrapper, this time leveraging 
 
 An 'overlay' is a statically defined directory tree hierarchy that is copied into the chroot after bdebstrap completes execution. An overlay is identified by a directory named 'rootfs-overlay' and can reside in two independent locations:
 
- * `<image dir>/rootfs-overlay` (Usage: optional) (Provided-by: image)
+ * `<image dir>/device/rootfs-overlay` (Usage: optional) (Provided-by: image)
 
    Image layout specific root file system contents.
 
- * `<board dir>/rootfs-overlay` (Usage: optional) (Provided-by: board)
+ * `<board dir>/device/rootfs-overlay` (Usage: optional) (Provided-by: board)
 
    Board specific root file system contents.
 
@@ -477,6 +477,11 @@ The hooks available for user customisation are documented below. If a hook is to
 === bdebstrap
 
 rpi-image-gen extends the support of bdebstrap hooks to image and board directories. Hooks with filenames beginning with ```setup```,  ```essential```, ```customize``` and ```cleanup``` are supported and must exist in a sub-directory named```bdebstrap``` within the image or board directory in order for them to be run at the respective stage of chroot creation. Their file extension is ignored. Sub-directories are not traversed.
+
+=== initramfs
+
+If ```initramfs-tools(7)``` is installed in the chroot, rpi-image-gen extends the support of initramfs scripts and hooks to image and board directories via their sub-directory ```device/initramfs-tools```. If present, the entire contents of this directory is recursively copied into the chroot. Mode and ownership attributes are preserved. Destination files will not be overwritten. rpi-image-gen performs this operation during the ```customize``` stage of chroot creation and guarantees it will take place after invocation of all image and board bdebstrap ```customize``` hooks.
+
 
 === post-build
 
