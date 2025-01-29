@@ -294,11 +294,11 @@ runh()
 
 
 # post-build: apply rootfs overlays - image layout then board
-if [ -d ${IGIMAGE}/rootfs-overlay ] ; then
-   run rsync -a ${IGIMAGE}/rootfs-overlay/ ${IGconf_work_dir}/rootfs
+if [ -d ${IGIMAGE}/device/rootfs-overlay ] ; then
+   run rsync -a ${IGIMAGE}/device/rootfs-overlay/ ${IGconf_work_dir}/rootfs
 fi
-if [ -d ${IGBOARD}/rootfs-overlay ] ; then
-   run rsync -a ${IGBOARD}/rootfs-overlay/ ${IGconf_work_dir}/rootfs
+if [ -d ${IGBOARD}/device/rootfs-overlay ] ; then
+   run rsync -a ${IGBOARD}/device/rootfs-overlay/ ${IGconf_work_dir}/rootfs
 fi
 
 
