@@ -1,5 +1,5 @@
 # Comments are supported
-TARGET_HOSTNAME=frobulator
+DEVICE_HOSTNAME=frobulator
 # All variables will be translated to lower case and made available to hooks
 first_user_name=pilot
 FIRST_USER_PASS=removeme

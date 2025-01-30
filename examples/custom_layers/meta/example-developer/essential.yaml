@@ -8,7 +8,7 @@ mmdebstrap:
 #  customize-hooks:
     # Could perform ops here after the chroot is set up and packages installed, e.g.
     #   mkdir -p $1/usr/local/assets
-    #   $IGconf_ext_dir/template-gen $IGconf_locale_default $IGconf_target_hostname > $1/usr/local/assets/my.template
+    #   $IGconf_ext_dir/template-gen $IGconf_locale_default $IGconf_device_hostname > $1/usr/local/assets/my.template
 #  cleanup-hooks:
     # Could perform chroot ops here when cleaning up
   packages:

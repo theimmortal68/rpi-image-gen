@@ -92,7 +92,7 @@ fi
 
 # Constants
 IGTOP_CONFIG="${IGTOP}/config"
-IGTOP_BOARD="${IGTOP}/board"
+IGTOP_DEVICE="${IGTOP}/device"
 IGTOP_IMAGE="${IGTOP}/image"
 IGTOP_PROFILE="${IGTOP}/profile"
 IGTOP_SBOM="${IGTOP}/sbom"
@@ -116,13 +116,13 @@ msg "Reading $INCONFIG from $IGTOP_CONFIG with options [$INOPTIONS]"
 
 
 # Defaults
-IGconf_target_board=pi5
+IGconf_device_class=pi5
+IGconf_device_variant=
 IGconf_image_version=$(date +%Y-%m-%d)
-IGconf_image_name="${IGconf_target_board}-$(echo "${INCONFIG}"|sed -s 's|\/|\-|g')-${IGconf_image_version}"
 IGconf_image_suffix=img
 IGconf_image_compression=none
 unset IGconf_apt_proxy
-IGconf_target_hostname=raspberrypi
+IGconf_device_hostname=raspberrypi
 IGconf_first_user_name=pi
 unset IGconf_first_user_pass
 IGconf_locale_default="en_GB.UTF-8"
@@ -149,8 +149,8 @@ read_config "${IGTOP_CONFIG}/${INCONFIG}.cfg"
 
 
 # Internalise hierarchy paths, prioritising the external sub-directory tree
-[[ -d $EXT_DIR ]] && IGBOARD=$(realpath -e "${EXT_DIR}/board/$IGconf_target_board" 2>/dev/null)
-: ${IGBOARD:=${IGTOP_BOARD}/$IGconf_target_board}
+[[ -d $EXT_DIR ]] && IGDEVICE=$(realpath -e "${EXT_DIR}/device/$IGconf_device_class" 2>/dev/null)
+: ${IGDEVICE:=${IGTOP_DEVICE}/$IGconf_device_class}
 
 [[ -d $EXT_DIR ]] && IGIMAGE=$(realpath -e "${EXT_DIR}/image/$IGconf_image_layout" 2>/dev/null)
 : ${IGIMAGE:=${IGTOP_IMAGE}/$IGconf_image_layout}
@@ -160,7 +160,7 @@ read_config "${IGTOP_CONFIG}/${INCONFIG}.cfg"
 
 
 # Final path validation
-for i in IGBOARD IGIMAGE IGPROFILE ; do
+for i in IGDEVICE IGIMAGE IGPROFILE ; do
    msg "$i ${!i}"
    realpath -e ${!i} > /dev/null 2>&1 || die "$i is invalid"
 done
@@ -171,6 +171,8 @@ done
 
 
 # Remaining defaults
+: "${IGconf_device_variant:=none}"
+IGconf_image_name="${IGconf_device_class}-${IGconf_device_variant}-$(echo "${INCONFIG}"|sed -s 's|\/|\-|g')-${IGconf_image_version}"
 : "${IGconf_work_dir:=${IGTOP}/work/${IGconf_image_name}}"
 : "${IGconf_image_outputdir:=${IGconf_work_dir}/artefacts}"
 : "${IGconf_image_deploydir:=${IGconf_work_dir}/deploy}"
@@ -233,7 +235,7 @@ ENV_ROOTFS+=('--env' IGTOP=$IGTOP)
 ENV_ROOTFS+=('--env' META_HOOKS=$META_HOOKS)
 ENV_ROOTFS+=('--env' RPI_TEMPLATES=$RPI_TEMPLATES)
 
-for i in IGBOARD IGIMAGE IGPROFILE ; do
+for i in IGDEVICE IGIMAGE IGPROFILE ; do
    ENV_ROOTFS+=('--env' ${i}="${!i}")
    ENV_POST_BUILD+=(${i}="${!i}")
 done
@@ -268,7 +270,7 @@ done < "${IGPROFILE}"
    "${ENV_ROOTFS[@]}" \
    --force \
    --name "$IGconf_image_name" \
-   --hostname "$IGconf_target_hostname" \
+   --hostname "$IGconf_device_hostname" \
    --output "$IGconf_image_outputdir" \
    --target "${IGconf_work_dir}/rootfs" \
    --setup-hook 'bin/runner setup "${IGconf_work_dir}/rootfs"' \
@@ -293,30 +295,30 @@ runh()
 }
 
 
-# post-build: apply rootfs overlays - image layout then board
+# post-build: apply rootfs overlays - image layout then device
 if [ -d ${IGIMAGE}/device/rootfs-overlay ] ; then
    run rsync -a ${IGIMAGE}/device/rootfs-overlay/ ${IGconf_work_dir}/rootfs
 fi
-if [ -d ${IGBOARD}/device/rootfs-overlay ] ; then
-   run rsync -a ${IGBOARD}/device/rootfs-overlay/ ${IGconf_work_dir}/rootfs
+if [ -d ${IGDEVICE}/device/rootfs-overlay ] ; then
+   run rsync -a ${IGDEVICE}/device/rootfs-overlay/ ${IGconf_work_dir}/rootfs
 fi
 
 
-# post-build: hooks - image layout then board
+# post-build: hooks - image layout then device
 if [ -x ${IGIMAGE}/post-build.sh ] ; then
    runh ${IGIMAGE}/post-build.sh ${IGconf_work_dir}/rootfs
 fi
-if [ -x ${IGBOARD}/post-build.sh ] ; then
-   runh ${IGBOARD}/post-build.sh ${IGconf_work_dir}/rootfs
+if [ -x ${IGDEVICE}/post-build.sh ] ; then
+   runh ${IGDEVICE}/post-build.sh ${IGconf_work_dir}/rootfs
 fi
 
 
 [[ $ONLY_ROOTFS = 1 ]] && exit $?
 
 
-# pre-image: hooks - board has priority over image layout
-if [ -x ${IGBOARD}/pre-image.sh ] ; then
-   runh ${IGBOARD}/pre-image.sh ${IGconf_work_dir}/rootfs ${IGconf_image_outputdir}
+# pre-image: hooks - device has priority over image layout
+if [ -x ${IGDEVICE}/pre-image.sh ] ; then
+   runh ${IGDEVICE}/pre-image.sh ${IGconf_work_dir}/rootfs ${IGconf_image_outputdir}
 elif [ -x ${IGIMAGE}/pre-image.sh ] ; then
    runh ${IGIMAGE}/pre-image.sh ${IGconf_work_dir}/rootfs ${IGconf_image_outputdir}
 else
@@ -347,9 +349,9 @@ for f in "${IGconf_image_outputdir}"/genimage*.cfg; do
 done
 
 
-# post-image: hooks - board has priority over image layout
-if [ -x ${IGBOARD}/post-image.sh ] ; then
-   runh ${IGBOARD}/post-image.sh $IGconf_image_deploydir
+# post-image: hooks - device has priority over image layout
+if [ -x ${IGDEVICE}/post-image.sh ] ; then
+   runh ${IGDEVICE}/post-image.sh $IGconf_image_deploydir
 elif [ -x ${IGIMAGE}/post-image.sh ] ; then
    runh ${IGIMAGE}/post-image.sh $IGconf_image_deploydir
 else
