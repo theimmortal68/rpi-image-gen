@@ -1,0 +1,3 @@
+# Default partition sizes
+boot_part_size=100%
+root_part_size=100%

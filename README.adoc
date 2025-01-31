@@ -240,6 +240,13 @@ The intention is for rpi-image-gen to have parity with many of the options suppo
 
    The output format of the SBOM.
 
+ * `DEVICE_OPTIONS` (Default: options)
+
+   The name of the file in the device directory that contains configuration variables specific to that device.
+
+ * `IMAGE_OPTIONS` (Default: options)
+
+   The name of the file in the image layout directory that contains configuration variables specific to that layout.
 
 == Execution Flow
 
@@ -251,12 +258,15 @@ Before commencing creation of the rootfs, the configuration of the system is ass
 
 * Default settings
 * Config file settings
+* Device and Image option file settings
 * User option file settings
 
 The config file uses .ini file syntax (https://en.wikipedia.org/wiki/INI_file) to set ```key=value``` pairs. +
 The options file is a shell fragment containing ```key=value``` pairs.
 
 rpi-image-gen adopts a system-wide prefix for all variables it exposes to YAML layers and hooks. The prefix is ```IGconf```. In addition, when reading the config file, a variable declared in a section has the section name included in its prefix when it's translated. Sections not specifically read will be ignored. Variables set from the options file will be prefixed and translated as-is. Translation includes the variable name being converted to lower case.
+
+Loading of Device and Image option files will set their configuration variables to default values only if a variable is not already set. The User option file can override any variable set previously.
 
 Understanding how to set and create variables is an important part of using rpi-image-gen because it forms the foundation of user customisation.
 

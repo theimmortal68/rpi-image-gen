@@ -67,7 +67,7 @@ while getopts "c:D:hiN:o:r" flag ; do
          ;;
       o)
          INOPTIONS=$(realpath -m "$OPTARG")
-         [[ -s $INOPTIONS ]] || { usage ; die "Invalid options file: $INOPTIONS" ; }
+         [[ -f $INOPTIONS ]] || { usage ; die "Invalid options file: $INOPTIONS" ; }
          ;;
       r)
          ONLY_ROOTFS=1
@@ -133,6 +133,8 @@ unset IGconf_ext_dir
 unset IGconf_ext_nsdir
 unset IGconf_apt_keydir
 IGconf_sbom_output_format="spdx-json"
+IGconf_device_options="options"
+IGconf_image_options="options"
 
 
 # Provide external directory paths
@@ -166,13 +168,17 @@ for i in IGDEVICE IGIMAGE IGPROFILE ; do
 done
 
 
-# Load options
+# Load options allowing user options to always override
+IGDEVICE_OPT=$(realpath -e "${IGDEVICE}/$IGconf_device_options" 2>/dev/null)
+IGIMAGE_OPT=$(realpath -e "${IGIMAGE}/$IGconf_image_options" 2>/dev/null)
+[[ -s "$IGDEVICE_OPT" ]] && aggregate_options "device" "$IGDEVICE_OPT"
+[[ -s "$IGIMAGE_OPT" ]] && aggregate_options "image" "$IGIMAGE_OPT"
 [[ -s "$INOPTIONS" ]] && read_options "$INOPTIONS"
 
 
 # Remaining defaults
 : "${IGconf_device_variant:=none}"
-IGconf_image_name="${IGconf_device_class}-${IGconf_device_variant}-$(echo "${INCONFIG}"|sed -s 's|\/|\-|g')-${IGconf_image_version}"
+: IGconf_image_name="${IGconf_device_class}-${IGconf_device_variant}-$(echo "${INCONFIG}"|sed -s 's|\/|\-|g')-${IGconf_image_version}"
 : "${IGconf_work_dir:=${IGTOP}/work/${IGconf_image_name}}"
 : "${IGconf_image_outputdir:=${IGconf_work_dir}/artefacts}"
 : "${IGconf_image_deploydir:=${IGconf_work_dir}/deploy}"

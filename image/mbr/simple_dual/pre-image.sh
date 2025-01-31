@@ -5,9 +5,6 @@ set -eu
 rootfs=$1
 genimg_in=$2
 
-: "${IGconf_image_boot_part_size:=100%}"
-: "${IGconf_image_root_part_size:=100%}"
-
 cat genimage.cfg.in | sed \
    -e "s|<IMAGE_DIR>|$IGconf_image_outputdir|g" \
    -e "s|<IMAGE_NAME>|$IGconf_image_name|g" \

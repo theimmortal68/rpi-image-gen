@@ -56,3 +56,5 @@ Options
 ----
 image_boot_part_size=200%
 ----
+
+The options file in the appropriate image layout sub-directory defines the default values of the supported configuration variables.

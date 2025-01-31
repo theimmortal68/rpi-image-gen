@@ -16,18 +16,11 @@ boot_partition=2
 boot_partition=3
 EOF
 
-# Generate the config for genimage to ingest:
-# FIXME - sizes should be easily configurable
-FW_SIZE=125%
-ROOT_SIZE=200%
-
-SLOTP_PROCESS=$(readlink -f slot-post-process.sh)
-
 cat genimage.cfg.in | sed \
    -e "s|<IMAGE_DIR>|$IGconf_image_outputdir|g" \
    -e "s|<IMAGE_NAME>|$IGconf_image_name|g" \
    -e "s|<IMAGE_SUFFIX>|$IGconf_image_suffix|g" \
-   -e "s|<FW_SIZE>|$FW_SIZE|g" \
-   -e "s|<ROOT_SIZE>|$ROOT_SIZE|g" \
-   -e "s|<SLOTP>|'$SLOTP_PROCESS'|g" \
+   -e "s|<FW_SIZE>|$IGconf_image_boot_part_size|g" \
+   -e "s|<ROOT_SIZE>|$IGconf_image_root_part_size|g" \
+   -e "s|<SLOTP>|'$(readlink -ef slot-post-process.sh)'|g" \
    > ${genimg_in}/genimage.cfg
