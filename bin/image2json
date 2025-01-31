@@ -8,10 +8,11 @@ import copy
 import sys
 
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 
-IMAGE_KEYS = {"IGconf_target_board",
+IMAGE_KEYS = {"IGconf_device_class",
+              "IGconf_device_variant",
               "IGconf_image_name",
               "IGconf_image_version",
               "IGconf_image_outputdir"}
@@ -172,8 +173,6 @@ def parse_fstab(fstab_paths):
                         continue  # skip comments or empty
 
                     parts = line.split()
-                    #if len(parts) < 4:
-                    #    continue  # skip unusable
                     if len(parts) == 4:
                         device, mountpoint, fstype, options = parts[:4]
                         freq = "0"

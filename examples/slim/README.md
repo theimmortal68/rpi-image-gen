@@ -1,10 +1,10 @@
 Build a small system with minimum base packages.
 
-Contains a custom image layout and a custom board dir.
+Contains a custom image layout and a custom device dir.
 
 ```text
 examples/slim/
-|-- board
+|-- device
 |   `-- mypi5
 |       |-- post-build.sh
 |       `-- rootfs-overlay

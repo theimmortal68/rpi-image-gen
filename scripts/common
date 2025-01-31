@@ -257,7 +257,7 @@ read_config() {
 
    read_config_section image "$cfg"
    read_config_section system "$cfg"
-   read_config_section target "$cfg"
+   read_config_section device "$cfg"
    read_config_section sbom "$cfg"
 }
 export -f read_config

@@ -2,9 +2,9 @@
 
 set -u
 
-# Copy the firmware image set into the target fs so it'll be available.
+# Copy the firmware image set into the device fs so it'll be available.
 mkdir ${IMAGEMOUNTPATH}/fw-store
 rsync -av ${OUTPUTPATH}/firmware.squashfs ${IMAGEMOUNTPATH}/fw-store
 
-# It will be mounted on the target here
+# It will be mounted on the device here
 mkdir -p ${IMAGEMOUNTPATH}/mnt/firmware
