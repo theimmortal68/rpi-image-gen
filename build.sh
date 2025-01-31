@@ -178,7 +178,7 @@ IGIMAGE_OPT=$(realpath -e "${IGIMAGE}/$IGconf_image_options" 2>/dev/null)
 
 # Remaining defaults
 : "${IGconf_device_variant:=none}"
-: IGconf_image_name="${IGconf_device_class}-${IGconf_device_variant}-$(echo "${INCONFIG}"|sed -s 's|\/|\-|g')-${IGconf_image_version}"
+: "${IGconf_image_name:=${IGconf_device_class}-${IGconf_device_variant}-"${INCONFIG//\\/-}"-${IGconf_image_version}}"
 : "${IGconf_work_dir:=${IGTOP}/work/${IGconf_image_name}}"
 : "${IGconf_image_outputdir:=${IGconf_work_dir}/artefacts}"
 : "${IGconf_image_deploydir:=${IGconf_work_dir}/deploy}"
