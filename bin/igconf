@@ -1,0 +1,72 @@
+#!/bin/bash
+
+set -u
+
+[[ $# -lt 1 ]] && exit 1
+
+check_set()
+{
+   for v in "$@"; do
+      if [ -z ${!v+x} ]; then
+         return 1 # unset
+      fi
+    done
+    return 0
+}
+
+check_y()
+{
+   check_set "$@" || return 1
+   for v in "$@"; do
+      case ${!v,,} in
+         y|yes)
+            ;;
+      *)
+         return 1
+         ;;
+      esac
+   done
+}
+
+check_n()
+{
+   check_set "$@" || return 1
+   for v in "$@"; do
+      case ${!v,,} in
+         n|no)
+            ;;
+      *)
+         return 1
+         ;;
+      esac
+   done
+}
+
+
+op="$1"
+shift 1
+
+vars=()
+for v in "$@" ; do
+   v="${v#IGconf_}"
+   vars+=("IGconf_${v}")
+done
+
+case "$op" in
+   is_y)
+      check_y "${vars[@]}"
+      exit $?
+      ;;
+   is_n)
+      check_n "${vars[@]}"
+      exit $?
+      ;;
+   is_set)
+      check_set "${vars[@]}"
+      exit $?
+      ;;
+   *)
+      ;;
+esac
+
+exit 1
