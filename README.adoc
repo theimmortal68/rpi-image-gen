@@ -101,7 +101,7 @@ The rpi-image-gen tree structure contains individual sub-component directories, 
 
 === EXT_DIR ===
 
-If rpi-image-gen is provided with a path to an external directory on the command line it will use this directory when resolving sub-components paths for ```config/```, ```profile/```, ```image/``` and ```device/``` and it will include the ```meta/``` sub-directory of this path in the list when searching for YAML meta layers defined by the Profile. The external directory does not need to contain all sub-component directories. If no external directory is provided, variable ```IGTOP``` defines the root directory for all sub-components.
+If rpi-image-gen is provided with a path to an external directory on the command line it will use this directory when resolving sub-components paths for ```config/```, ```profile/```, ```image/``` and ```device/``` and it will include the ```meta/``` sub-directory of this path in the list when searching for YAML meta layers defined by the Profile. The external directory does not need to contain all sub-component directories; it may just contain custom hooks. If no external directory is provided, variable ```IGTOP``` defines the root directory for all sub-components.
 
 === Config ===
 
@@ -494,7 +494,7 @@ The hooks available for user customisation are documented below. If a hook is to
 
 === bdebstrap
 
-rpi-image-gen extends the support of bdebstrap hooks to image and device directories. Hooks with filenames beginning with ```setup```,  ```essential```, ```customize``` and ```cleanup``` are supported and must exist in a sub-directory named```bdebstrap``` within the image or device directory in order for them to be run at the respective stage of chroot creation. Their file extension is ignored. Sub-directories are not traversed.
+rpi-image-gen extends the support of bdebstrap hooks to image, device and external (```EXT_DIR```) directories. Hooks with filenames beginning with ```setup```,  ```essential```, ```customize``` and ```cleanup``` are supported and must exist in a sub-directory named```bdebstrap``` within the directory in order for them to be run at the respective stage of chroot creation. Their file extension is ignored. Sub-directories are not traversed.
 
 === initramfs
 
