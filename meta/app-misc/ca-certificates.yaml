@@ -1,0 +1,6 @@
+---
+name: ca-certs
+description: Common CA Certificate files
+mmdebstrap:
+  packages:
+    - ca-certificates
