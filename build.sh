@@ -9,6 +9,18 @@ source "${IGTOP}/scripts/dependencies_check"
 dependencies_check "${IGTOP}/depends" || exit 1
 
 
+# Defaults
+EXT_DIR=
+EXT_META=
+EXT_NS=
+EXT_NSDIR=
+EXT_NSMETA=
+INOPTIONS=
+INCONFIG=generic64-apt-simple
+ONLY_ROOTFS=0
+ONLY_IMAGE=0
+
+
 usage()
 {
 cat <<-EOF >&2
@@ -19,6 +31,7 @@ Root filesystem and image generation utility.
 
 Options:
   [-c <config>]    Name of config file, location defaults to config/
+                   Default: $INCONFIG
   [-D <directory>] Directory that takes precedence over the default in-tree
                    hierarchy when searching for config files, profiles, meta
                    layers and image layouts.
@@ -35,17 +48,6 @@ Options:
 EOF
 }
 
-
-# Arg parser and defaults
-EXT_DIR=
-EXT_META=
-EXT_NS=
-EXT_NSDIR=
-EXT_NSMETA=
-INOPTIONS=
-INCONFIG=generic64-apt-simple
-ONLY_ROOTFS=0
-ONLY_IMAGE=0
 
 while getopts "c:D:hiN:o:r" flag ; do
    case "$flag" in

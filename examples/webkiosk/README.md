@@ -16,11 +16,11 @@ examples/webkiosk/
 Note: This relies on the base provided by the in-tree configuration file ```generic64-apt-simple.cfg```. To deploy a production kiosk system it is envisaged that a specific config file and profile would be used, therefore giving full control over the base system to the developer.
 
 ```bash
-./build.sh -c generic64-apt-simple -D ./examples/kiosk/
+./build.sh -c generic64-apt-simple -D ./examples/webkiosk/
 ```
 
 Since images are created with user login disabled by default, if you need to be able to log into this system via the console you'll need to specify a password in an options file like this:
 
 ```bash
-./build.sh -c generic64-apt-simple -D ./examples/kiosk/ -o ./examples/setoptions/my.options
+./build.sh -c generic64-apt-simple -D ./examples/webkiosk/ -o ./examples/setoptions/my.options
 ```
