@@ -16,7 +16,7 @@ Similar to Raspberry Pi OS, this layout has an MBR partition table containing tw
 |100%
 |Boot firmware
 
-|ext4
+|ext4 or btrfs
 |ROOT
 |[1]
 |100%
@@ -24,19 +24,28 @@ Similar to Raspberry Pi OS, this layout has an MBR partition table containing tw
 
 |===
 
-[1] Refer to ```genimage.cfg.in```
+[1] Refer to ```genimage.cfg.in.${image_rootfs_type}```
 
 == Configuration Options
 
-[cols="1,1"]
+[cols="1,1,1,1"]
 |===
-|Variable |Description
+|Variable |Description |Supported |Default
 
 |image_boot_part_size
-|Size of the boot partition image
+|Boot partition image size
+|Units (genimage)
+|100%
 
 |image_root_part_size
-|Size of the root partition image
+|Root partition image size
+|Units (genimage)
+|100%
+
+|image_rootfs_type
+|Root filesystem type
+|ext4, btrfs
+|ext4
 
 |===
 
