@@ -75,6 +75,7 @@ git clone https://github.com/raspberrypi/rpi-image-gen.git
 To install the required Host dependencies for rpi-image-gen you should run:
 
 ----
+cd rpi-image-gen
 sudo ./install_deps.sh
 ----
 
@@ -105,7 +106,7 @@ If rpi-image-gen is provided with a path to an external directory on the command
 
 === Config ===
 
-The config file is provided as an command line argument and is the first asset to be located, either from the external directory or in-tree. Once the config is loaded and parsed, sub-components for device, profile and image are searched for and their paths resolved, either from the external directory or in-tree. rpi-image-gen will always prioritise the external directory when searching.
+The config file is provided as an command line argument and is the first asset to be located, either from the external directory or in-tree. Once the config is loaded and parsed, sub-components for device, profile and image are searched for and their paths resolved, either from the external directory or in-tree. rpi-image-gen will always prioritise the external directory when searching. If not specified, a default config file is used. See ```./build.sh -help``` for further information.
 
 === Device
 
