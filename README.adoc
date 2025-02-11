@@ -501,6 +501,17 @@ rpi-image-gen extends the support of bdebstrap hooks to image, device and extern
 
 If ```initramfs-tools(7)``` is installed in the chroot, rpi-image-gen extends the support of initramfs scripts and hooks to image and device directories via their sub-directory ```device/initramfs-tools```. If present, the entire contents of this directory is recursively copied into the chroot. Mode and ownership attributes are preserved. Destination files will not be overwritten. rpi-image-gen performs this operation during the ```customize``` stage of chroot creation and guarantees it will take place after invocation of all image and device bdebstrap ```customize``` hooks.
 
+=== pre-build
+
+ * `<image dir>/pre-build.sh` (Usage: optional) (Provided-by: image)
+
+   Image layout specific pre-build operations.
+
+ * `<device dir>/pre-build.sh` (Usage: optional) (Provided-by: device)
+
+   Device specific pre-build operations.
+
+Both hooks are executed in the order they are listed above.
 
 === post-build
 

@@ -272,21 +272,6 @@ while read -r line; do
 done < "${IGPROFILE}"
 
 
-# Generate rootfs
-[[ $ONLY_IMAGE = 1 ]] && true || rund "$IGTOP" podman unshare bdebstrap \
-   "${ARGS_LAYERS[@]}" \
-   "${ENV_ROOTFS[@]}" \
-   --force \
-   --name "$IGconf_image_name" \
-   --hostname "$IGconf_device_hostname" \
-   --output "$IGconf_image_outputdir" \
-   --target "${IGconf_work_dir}/rootfs" \
-   --setup-hook 'bin/runner setup "${IGconf_work_dir}/rootfs"' \
-   --essential-hook 'bin/runner essential "${IGconf_work_dir}/rootfs"' \
-   --customize-hook 'bin/runner customize "${IGconf_work_dir}/rootfs"' \
-   --cleanup-hook 'bin/runner cleanup "${IGconf_work_dir}/rootfs"'
-
-
 # hook execution
 runh()
 {
@@ -301,6 +286,30 @@ runh()
       die "Hook Error: ["$hookdir"/"$hook"] ($ret)"
    fi
 }
+
+
+# pre-build: hooks - image layout then device
+if [ -x ${IGIMAGE}/pre-build.sh ] ; then
+   runh ${IGIMAGE}/pre-build.sh
+fi
+if [ -x ${IGDEVICE}/pre-build.sh ] ; then
+   runh ${IGDEVICE}/pre-build.sh
+fi
+
+
+# Generate rootfs
+[[ $ONLY_IMAGE = 1 ]] && true || rund "$IGTOP" podman unshare bdebstrap \
+   "${ARGS_LAYERS[@]}" \
+   "${ENV_ROOTFS[@]}" \
+   --force \
+   --name "$IGconf_image_name" \
+   --hostname "$IGconf_device_hostname" \
+   --output "$IGconf_image_outputdir" \
+   --target "${IGconf_work_dir}/rootfs" \
+   --setup-hook 'bin/runner setup "${IGconf_work_dir}/rootfs"' \
+   --essential-hook 'bin/runner essential "${IGconf_work_dir}/rootfs"' \
+   --customize-hook 'bin/runner customize "${IGconf_work_dir}/rootfs"' \
+   --cleanup-hook 'bin/runner cleanup "${IGconf_work_dir}/rootfs"'
 
 
 # post-build: apply rootfs overlays - image layout then device

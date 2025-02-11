@@ -5,7 +5,7 @@ set -eu
 rootfs=$1
 genimg_in=$2
 
-cat genimage.cfg.in | sed \
+cat genimage.cfg.in.$IGconf_image_rootfs_type | sed \
    -e "s|<IMAGE_DIR>|$IGconf_image_outputdir|g" \
    -e "s|<IMAGE_NAME>|$IGconf_image_name|g" \
    -e "s|<IMAGE_SUFFIX>|$IGconf_image_suffix|g" \
