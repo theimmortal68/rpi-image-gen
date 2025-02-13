@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -u
+
+# User role and management operations
+
+if igconf is_y meta_docker_trust_usr1name ; then
+   chroot $1 sh -c "adduser $IGconf_device_user1name docker"
+fi

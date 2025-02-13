@@ -1,6 +1,5 @@
 ---
 name: docker-engine
-description: https://docs.docker.com/engine/install/debian/
 mmdebstrap:
   architectures:
     - arm64
@@ -10,7 +9,7 @@ mmdebstrap:
     - mkdir -p $1/usr/share/keyrings/
     - curl -fsSL https://download.docker.com/linux/debian/gpg -o $1/usr/share/keyrings/docker.asc
     - chmod a+r $1/usr/share/keyrings/docker.asc
-    - cp -p $1/usr/share/keyrings/docker.asc $IGconf_apt_keydir
+    - cp -p $1/usr/share/keyrings/docker.asc $IGconf_sys_apt_keydir
   packages:
     - docker-ce
     - docker-ce-cli
@@ -24,6 +23,4 @@ mmdebstrap:
       deb [arch=arm64 signed-by=/usr/share/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable
       EOF
     - sed -i '/download\.docker\.com/d' $1/etc/apt/sources.list
-    # https://docs.docker.com/engine/security/#docker-daemon-attack-surface
-    #- chroot $1 sh -c "groupadd -f -r docker"
-    #- chroot $1 sh -c "adduser $IGconf_first_user_name docker"
+    - chroot $1 sh -c "groupadd -f -r docker"

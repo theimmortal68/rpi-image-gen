@@ -1,0 +1,16 @@
+# rpi-image-gen image defaults
+
+# Version string of the image to build
+version=$(date +%Y-%m-%d)
+
+# The base suffix of the generated image(s)
+suffix=img
+
+# Identifier for the compression scheme used when deploying images and assets
+compression=none
+
+# Optional file in an image layout directory providing additional settings
+options=defaults
+
+# The base name for all generated images
+name="${IGconf_device_class}-${IGconf_device_variant}-${IGconf_image_version}"

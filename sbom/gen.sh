@@ -10,7 +10,7 @@ SYFT_VER=v1.19.0
 # If host has syft, use it
 if ! hash syft 2>/dev/null; then
    curl -sSfL https://raw.githubusercontent.com/anchore/syft/${SYFT_VER}/install.sh \
-      | sh -s -- -b ${IGconf_work_dir}/host/bin
+      | sh -s -- -b ${IGconf_sys_workdir}/host/bin
 fi
 
 SYFT=$(syft --version 2>/dev/null) || die "syft is unusable"

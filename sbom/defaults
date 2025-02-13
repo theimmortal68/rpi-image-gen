@@ -1,0 +1,4 @@
+# rpi-image-gen sbom defaults
+
+# Default format for the SBOM
+output_format="spdx-json"

@@ -102,27 +102,27 @@ The rpi-image-gen tree structure contains individual sub-component directories, 
 
 === EXT_DIR ===
 
-If rpi-image-gen is provided with a path to an external directory on the command line it will use this directory when resolving sub-components paths for ```config/```, ```profile/```, ```image/``` and ```device/``` and it will include the ```meta/``` sub-directory of this path in the list when searching for YAML meta layers defined by the Profile. The external directory does not need to contain all sub-component directories; it may just contain custom hooks. If no external directory is provided, variable ```IGTOP``` defines the root directory for all sub-components.
+If rpi-image-gen is provided with a path to an external directory on the command line it will use this directory when resolving sub-components paths for ```config/```, ```profile/```, ```image/``` and ```device/``` and it will include the ```meta/``` sub-directory of this path in the list when searching for YAML meta layers defined by the Profile. This allows a user to provide external directories for these sub-components and for them to take precedence over the `in-tree` equivalents. The external directory does not need to contain all sub-components; it may just contain custom hooks. If no external directory is provided, variable ```IGTOP``` defines the root directory of all sub-components.
 
-=== Config ===
+=== config ===
 
-The config file is provided as an command line argument and is the first asset to be located, either from the external directory or in-tree. Once the config is loaded and parsed, sub-components for device, profile and image are searched for and their paths resolved, either from the external directory or in-tree. rpi-image-gen will always prioritise the external directory when searching. If not specified, a default config file is used. See ```./build.sh -help``` for further information.
+The config file is provided as a command line argument and is loaded from the external directory or in-tree. The config directory contains rpi-image-gen config files. Once the config file is loaded and parsed, sub-components for device, profile and image are searched for and their paths resolved, either from the external directory or in-tree. rpi-image-gen will always prioritise the external directory when searching. If not specified, a default config file is used. See ```./build.sh -help``` for further information.
 
-=== Device
+=== device
 
 A device directory contains assets which are specific to a class of hardware device. Additionally, rpi-image-gen adopts a sub-directory named ```device``` in various locations to denote the contents are related to run-time software on the device (e.g. rootfs-overlay).
 
-=== Image
+=== image
 
-The image directory contains the necessary assets with which rpi-image-gen will use to create the output disk image(s).
+The image directory contains the necessary assets with which rpi-image-gen will use to create the output disk image(s) with a particular layout.
 
-=== Meta
+=== meta
 
-The in-tree meta directory is the default location from where all YAML layers are searched. The search path for additional meta layers can be augmented by usage of an external directory and optional namespace.
+The meta directory contains YAML layers which are individual 'recipes' used for rootfs creation. The search path for additional meta layers can be augmented by usage of ```EXT_DIR``` and optional namespace.
 
-=== Profile
+=== profile
 
-The profile is a plain text file which supports comments via ```#``` and where each line contains a YAML layer. For example, if a Profile contained:
+The profile is a plain text file which supports comments via ```#``` and where each line contains a YAML layer. The profile directory contains rpi-image-gen profiles. For example, if a Profile contained:
 
 ----
 # My device layer
@@ -131,123 +131,49 @@ my/fantastic/layer
 
 ...```my/fantastic/layer.yaml``` would be searched for.
 
+=== sbom
+
+The SBOM directory contains assets specific to generation of the SBOM (see below).
+
 Other sub-component directories exist for particular purposes and the path to some of those are propagated to all layers via dedicated variables. These are mainly to assist with scripting and template generation, e.g. when creating a systemd config fragment for a network interface, creation of RPi boot firmware config files, etc.
 
 == Options
 
-The intention is for rpi-image-gen to have parity with many of the options supported by pi-gen, either as a 1-1 mapping or by functional equivalence. The following options are supported and can be specified in the Options file or in the appropriate section of the Config file. Please note there is currently no support for reading them from the environment.
+rpi-image-gen settings are aggregated as part of the input parameter assembly stage (see below) before commencing the build, and are translated into fully qualified variables with prefix ```IGconf```. Settings specific to a sub-component are denoted by a particular namespace prefix such as ```device``` or ```image```. Default settings specific to a sub-component are loaded from files named 'defaults' in the appropriate directory (e.g. ```build.defaults```). rpi-image-gen uses the appropriate sub-component namespace when reading these files which simplifies variables declared within. All of these settings are classed as 'options' or 'configuration variables' depending on the scope. A variable can be set by:
 
- * `DEVICE_CLASS` (Default: `pi5`)
+The Environment +
+The config file (```-c```) +
+The user options file (```-o```) +
+Default settings +
 
-   The device class to build for.
+Rather than listing all available options here, please refer to the following files in the tree for further details:
 
- * `DEVICE_VARIANT` (Default: ``)
+=== device/build.defaults
 
-   The device variant.
+Device configuration build-time settings, e.g. class, profile, locale +
+Auto-prefix: ```device```
 
- * `IMAGE_VERSION` (Default: `Today's date represented as YYYY-MM-DD`)
+=== image/build.defaults
 
-   Version string of the image to build.
+Default build options for all image layouts, e.g. version, compression +
+Auto-prefix: ```image```
 
- * `IMAGE_NAME` (Default: `<DEVICE_CLASS>-<DEVICE_VARIANT>-<config name>-<IMAGE_VERSION>`)
+=== sys-build.defaults
 
-   The basename of the image to build.
+Default options for the build configuration, e.g. APT key directory, output artefacts directory +
+Auto-prefix: ```sys```
 
- * `IMAGE_SUFFIX` (Default: `img`)
+=== sbom/defaults
 
-   The suffix of the generated image(s).
+Default options for SBOM generation, e.g. output format +
+Auto-prefix: ```sbom```
 
- * `IMAGE_COMPRESSION` (Default: `none`)
+=== meta/defaults
 
-   Identifier for the compression scheme used when deploying images and assets.
+Default options for all meta layers +
+Auto-prefix: ```meta```
 
- * `WORK_DIR`  (Default: `<IGTOP>/work/<IMAGE_NAME>`)
-
-   Root of the directory hierarchy containing rpi-image-gen output artefacts. Note, depending on the system being built, this directory can amount to a substantial amount of consumed disk space.
-
- * `IMAGE_OUTPUTDIR` (Default: `<WORK_DIR>/artefacts`)
-
-   Location of all build product artefacts.
-
- * `IMAGE_DEPLOYDIR` (Default: `<WORK_DIR>/deploy`)
-
-   Location where final images and assets will be installed to.
-
- * `EXT_DIR`  (Default: unset)
-
-   Path to an external directory of where to search for sub-components and meta layers. This is set automatically via the the command line.
-
- * `EXT_NSDIR`  (Default: unset)
-
-   Path to an external directory namespace of where to search for addition meta layers. This is set automatically via the the command line.
-
- * `APT_KEYDIR` (Default: `<WORK_DIR>/keys`)
-
-   If a particular collection of keys are required for bdebstrap to download packages from the mirror(s) provided, set the directory containing them here. This will be passed to bdebstrap via aptopt Dir::Etc::TrustedParts. If not specified, rpi-image-gen assembles the keys it requires into this directory. This particular setting of Dir::Etc::TrustedParts will not be included in the image. If using this option, please make sure to install your key(s) into the chroot explicitly if a key contained in this directory points to a location that is not otherwise populated during chroot creation (for example by installing a keyring package).
-
- * `APT_PROXY` (Default: unset)
-
-   If you require the use of an apt proxy, set it here. This proxy setting will not be included in the image, making it safe to use an `apt-cacher` or similar package for development.
-   Also see `APT_PROXY_HTTP`.
-
- * `APT_PROXY_HTTP` (Default: unset)
-
-   If you require the use of an apt http proxy, set it here. This proxy setting will not be included in the image, making it safe to use an `apt-cacher` or similar package for development.
-   To maintain compatibility with pi-gen, this variable will inherit the value of `APT_PROXY` if that variable is set.
-
-  * `LOCALE_DEFAULT` (Default: 'en_GB.UTF-8' )
-
-   Default system locale.
-
- * `DEVICE_HOSTNAME` (Default: 'raspberrypi' )
-
-   Sets the hostname to the specified value.
-
- * `KEYBOARD_KEYMAP` (Default: 'gb' )
-
-   Default keyboard keymap.
-
-   To get the current value from a running system, run `debconf-show keyboard-configuration` and look at the `keyboard-configuration/xkb-keymap` value.
-
- * `KEYBOARD_LAYOUT` (Default: 'English (UK)' )
-   
-   Default keyboard layout.
-
-   To get the current value from a running system, run `debconf-show keyboard-configuration` and look at the `keyboard-configuration/variant` value.
-   
- * `TIMEZONE_DEFAULT` (Default: 'Europe/London' )
-
-   Default timezone. Also see `TIMEZONE_AREA` and `TIMEZONE_CITY`.
-
-   To get the current value from a running system, look in `/etc/timezone`.
-   
- * `TIMEZONE_AREA` (Default: 'Europe' )
-
-   Default timezone area. To maintain compatibility with pi-gen, this variable will inherit the first part of `TIMEZONE_DEFAULT`.
-
- * `TIMEZONE_CITY` (Default: 'London' )
-
-   Default timezone city. To maintain compatibility with pi-gen, this variable will inherit the second part of `TIMEZONE_DEFAULT`.
-
- * `FIRST_USER_NAME` (Default: `pi`)
-
-   Create a user account with this username. Please note that this user will *NOT* currently be renamed on the first boot.
-   
- * `FIRST_USER_PASS` (Default: unset)
-
-   Password for the first user. If unset, the account is locked.
-
- * `SBOM_OUTPUT_FORMAT` (Default: spdx-json)
-
-   The output format of the SBOM.
-
- * `DEVICE_OPTIONS` (Default: options)
-
-   The name of the file in the device directory that contains configuration variables specific to that device.
-
- * `IMAGE_OPTIONS` (Default: options)
-
-   The name of the file in the image layout directory that contains configuration variables specific to that layout.
+Meta layers can also provide their own specific default settings. Files declaring these defaults are located alongside their corresponding YAML layer and are loaded if the profile contains the associated layer.
 
 == Execution Flow
 
@@ -257,21 +183,40 @@ The three main stages of execution in rpi-image-gen are described below.
 
 Before commencing creation of the rootfs, the configuration of the system is assembled and translated into a set of environment variables established from different sources in the following order:
 
-* Default settings
-* Config file settings
-* Device and Image option file settings
-* User option file settings
+* User option file settings (scope: explicit set and unset [see Note1 below])
+* Config file settings (scope: aggregate, set and unset)
+* System wide default settings (scope: aggregate, set and unset)
+* Selected Device and Image settings (scope: aggregate, set and unset)
+* User option file settings (scope: explicit set and unset)
 
-The config file uses .ini file syntax (https://en.wikipedia.org/wiki/INI_file) to set ```key=value``` pairs. +
-The options file is a shell fragment containing ```key=value``` pairs.
+The config file uses .ini file syntax (https://en.wikipedia.org/wiki/INI_file) to set ```key=value``` pairs inside a section. +
+The user options file, and files containing default settings, are shell fragments containing declarative ```key=value``` pairs. +
 
-rpi-image-gen adopts a system-wide prefix for all variables it exposes to YAML layers and hooks. The prefix is ```IGconf```. In addition, when reading the config file, a variable declared in a section has the section name included in its prefix when it's translated. Sections not specifically read will be ignored. Variables set from the options file will be prefixed and translated as-is. Translation includes the variable name being converted to lower case.
+Both file types support comments, and empty lines are ignored.
 
-Loading of Device and Image option files will set their configuration variables to default values only if a variable is not already set. The User option file can override any variable set previously.
+The loading of defaults settings or the config file will only set a variable if it is unset, i.e. their assignments are 'aggregated'. The user options file can override any variable. For example, if variable ```IGconf_image_name``` was set in the Environment it would not be set by the loading of image defaults or the config file. It would, however, be set if the user options file assigned ```image_name``` to a non-empty string. If the user options file assigned it as empty it would be unset. When the declarative syntax is parsed, it does not support setting a variable to be empty. If a variable is assigned as empty it will be treated as being unset. Because of this, the user options file is re-read at the end of parsing to ensure it is able to override any previously set variables to be unset if necessary.
+
+As mentioned above, rpi-image-gen automatically applies a global prefix for all variables it parses from files and it applies a scope specific prefix to variables declared in config files and defaults. This 'translation' of variable parsing ensures variables automatically adhere to their defined scope. Unsupported config file sections are ignored. Variables set from the options file will be ```IGconf``` prefixed and translated as-is. Translation includes the variable name being converted to lower case. A variable is said to be 'fully qualified' after parsing and when prefixed with ```IGconf```. All fully qualified variables are propagated and made available to YAML layers and hooks via their execution environment.
+
+**Note1:** rpi-image-gen variables set from the Environment must be fully qualified otherwise they will be ignored. For example, to set the Device Class from the Environment, set variable ```IGconf_device_class``` accordingly. To set it from the user options file, assign variable ```device_class```.
+
+**Note2:** Exceptions to this are the individual ```meta``` layer default files which are loaded at the same time as their corresponding YAML layer.
 
 Understanding how to set and create variables is an important part of using rpi-image-gen because it forms the foundation of user customisation.
 
-==== Example
+==== Sections
+
+The following sections are supported when parsing a config file:
+
+* device
+* image
+* sys
+* sbom
+* meta
+
+Variables declared outside the scope of these sections will not be read. 
+
+==== Example 1
 These are equivalent: +
 
 Default
@@ -295,7 +240,7 @@ DEVICE_CLASS=pi5
 
 Processing the input sources and aggregating the variables this way allows the setting of a variable to override a previous setting. This may be particularly useful where customisation may only require the modification of a small number of variables compared with what was set previously. Furthermore, rpi-image-gen evaluates each variable after translation which means that variables set previously can be used to set other variables.
 
-==== Example
+==== Example 2
 
 Default
 
@@ -315,46 +260,46 @@ Yields:
 IGconf_image_suffix=pi5.bin
 ----
 
-The rpi-image-gen options file serves the same purpose as the pi-gen config file. It is envisaged that pi-gen users can use the same file to reflect their customisations when creating an image with rpi-image-gen, although at the current time support for an identical set of options is incomplete.
-
-After processing the sources, all ```IGconf``` variables are included in the environment of subsequent stages. This means that YAML layers and hooks have access to all ```IGconf``` variables.
-
 [TIP]
 --
 Via the Options file or a supported Config file section, it is possible to define new custom variables. rpi-image-gen does not 'filter' variables or perform any sort of manipulation of their values/contents. The propagation of all variables, including user defined custom variables, may be beneficial to YAML layers and hooks.
 --
 
-==== Example
+==== Example 3
 
-Default
+Environment
 
 ----
-IGconf_first_user_name=pi
+IGconf_device_user1name=pi
 ----
 
 Config
 
 ----
-[system]
+[device]
+user1name=rasp
+
+[sys]
 flavour=debug
 debugger=autoattach
+debug_port=8080
 
 ----
 
 Options
 
 ----
-system_debug_port=8080
-system_debug_user=$IGconf_first_user_name
+sys_debug_port=
+sys_debug_user=$IGconf_user1name
+sys_debugger=disabled
 ----
 
 Yields
 
 ----
-IGconf_system_flavour=debug
-IGconf_system_debugger=autoattach
-IGconf_system_debug_port=8080
-IGconf_system_debug_user=pi
+IGconf_sys_flavour=debug
+IGconf_sys_debugger=disabled
+IGconf_sys_debug_user=pi
 ----
 
 [TIP]
@@ -362,20 +307,20 @@ IGconf_system_debug_user=pi
 It's possible to include a Config file from another Config file provided both exist in the same directory. This may be useful in cases where there is a common configuration shared across variants. Rather than duplicating parts of a Config file in others, a common configuration can be included and any overrides or additional settings applied afterwards.
 --
 
-==== Example
+==== Example 4
 
 Common configuration fragment ```base.cfg```
 
 ----
 [device]
 class=edge01
+profile=v1
 
 [image]
 layout=ROTA
 default_slot=A
 
-[system]
-profile=v1
+[sys]
 safe_boot=y
 boot_scheme=2
 ----
@@ -390,11 +335,11 @@ resize=false
 appdata_size=1G
 ----
 
-**Note:** Files must be included _outside_ a config section. Including files from the Options file is not supported.
+**Note:** Files must be included _outside_ a config section. Including files from the user options file is not supported.
 
 === Root File System Construction 
 
-After assembling the environment variables from the input sources, rpi-image-gen reads the Profile and validates the path of each YAML layer before assembling each layer as an argument to bdebstrap. A layer must adhere to `bdebstrap` YAML syntax. Please refer to the bdebstrap man page for further details. It's also worth pointing out that if authoring shell expressions in YAML, it may be necessary to adopt usage of particular block scalar styles to achieve newlines inside a block. For example:
+After assembling the environment variables from the input sources, rpi-image-gen reads the Profile and validates the path of each YAML layer before reading its default settings (if present) and assembling each layer as an argument to bdebstrap. A layer must adhere to `bdebstrap` YAML syntax. Please refer to the bdebstrap man page for further details. It's also worth pointing out that if authoring shell expressions in YAML, it may be necessary to adopt usage of particular block scalar styles to achieve newlines inside a block. For example:
 
 ----
   - |-
@@ -410,7 +355,7 @@ A number of 'core hooks' are installed via bdebstrap command line arguments. The
 
 rpi-image-gen runs bdebstrap in a new Linux namespace via ```podman unshare```. This is required so that bdebstrap creates files with the correct ownership information, which is particularly important when creating a chroot that contains a user account. See podman-unshare(1) and user_namespaces(7) for further details.
 
-Before bdebstrap invokes mmdebstrap to begin creation of the chroot, it writes the fully aggregated and merged YAML to ```$IGconf_image_outputdir``` as ```config.yaml```. This is an incredibly useful file because it's essentially the 'recipe' for generating the chroot. It also creates a file called ```manifest``` in the same directory which lists all the packages that were installed in the chroot. 
+Before bdebstrap invokes mmdebstrap to begin creation of the chroot, it writes the fully aggregated and merged YAML to ```$IGconf_sys_outputdir``` as ```config.yaml```. This is an incredibly useful file because it's essentially the 'recipe' for generating the chroot. It also creates a file called ```manifest``` in the same directory which lists all the packages that were installed in the chroot. 
 
 The mmdebstrap execution is not regarded as in the scope of this document. mmdebstrap follows the rules governed by its design and by the configuration provided to it by bdebstrap. In turn, the vast majority of bdebstrap configuration is derived from the YAML layers provided to it by rpi-image-gen. From this point of view, rpi-image-gen could be regarded as a thin toolkit wrapper with which to design a system purely from YAML constructs and a set of environment variables. The application of both these things, once understood, is very powerful and provides the means to create a completely customised rootfs.
 
@@ -440,7 +385,7 @@ mmdebstrap:
 
 === SBOM
 
-A SBOM should be a reproducible and immutable artefact of the build. Generation of it takes place at the end of the post-build stage after all other hooks have run, and immediately before ```genimage``` invocation. It is not advised to perform any operation on the rootfs that could affect the data encapsulated by the SBOM after it has been generated. The SBOM is generated using ```syft``` (https://github.com/anchore/syft) which will be downloaded if not installed on the host. The SBOM is written to the image output directory (```IGconf_image_outputdir```) and its output format is configurable via the ```SBOM_OUTPUT_FORMAT``` variable which can be set via the Config or Options file. The output format is currently the only option available to the user.
+A SBOM should be a reproducible and immutable artefact of the build. Generation of it takes place at the end of the post-build stage after all other hooks have run, and immediately before ```genimage``` invocation. It is not advised to perform any operation on the rootfs that could affect the data encapsulated by the SBOM after it has been generated. The SBOM is generated using ```syft``` (https://github.com/anchore/syft) which will be downloaded if not installed on the host. The SBOM is written to the image output directory (```IGconf_sys_outputdir```) and its output format is configurable via the ```SBOM_OUTPUT_FORMAT``` variable which can be set via the Config or Options file. The output format is currently the only option available to the user.
 
 For example, these are equivalent: +
 
@@ -548,4 +493,4 @@ Only one of these hooks is executed. The device pre-image hook has priority. If 
 
    Image layout owned post-image operations.
 
-Only one of these hooks is executed. The device post-image hook has priority. If it exists, it will be executed. If it doesn't and the image layout post-image hook exists, that will be executed. If neither exist, a default post-image hook will be executed. It is the responsibility of the post-image hook to perform all operations required to deploy artefacts to ```IMAGE_DEPLOY_DIR``` (```IGconf_image_deploy_dir```), for example compressing image and SBOM.
+Only one of these hooks is executed. The device post-image hook has priority. If it exists, it will be executed. If it doesn't and the image layout post-image hook exists, that will be executed. If neither exist, a default post-image hook will be executed. It is the responsibility of the post-image hook to perform all operations required to deploy artefacts to ```IGconf_sys_deploydir```, for example compressing image and SBOM.

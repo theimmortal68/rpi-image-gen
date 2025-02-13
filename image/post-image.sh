@@ -15,9 +15,9 @@ esac
 shopt -s nullglob
 
 files=()
-files+=("${IGconf_image_outputdir}/${IGconf_image_name}"*.${IGconf_image_suffix})
-files+=("${IGconf_image_outputdir}/${IGconf_image_name}"*.${IGconf_image_suffix}.sparse)
-files+=("${IGconf_image_outputdir}/${IGconf_image_name}"*.sbom)
+files+=("${IGconf_sys_outputdir}/${IGconf_image_name}"*.${IGconf_image_suffix})
+files+=("${IGconf_sys_outputdir}/${IGconf_image_name}"*.${IGconf_image_suffix}.sparse)
+files+=("${IGconf_sys_outputdir}/${IGconf_image_name}"*.sbom)
 
 msg "Deploying image and SBOM"
 

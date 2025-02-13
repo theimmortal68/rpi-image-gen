@@ -1,6 +1,6 @@
-# Default partition sizes
+# Partition sizes
 boot_part_size=100%
 root_part_size=100%
 
-# Default root filesystem type
+# Root filesystem type
 rootfs_type=ext4

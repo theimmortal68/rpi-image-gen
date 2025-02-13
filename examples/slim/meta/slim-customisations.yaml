@@ -2,9 +2,9 @@
 name: example-slim
 mmdebstrap:
   customize-hooks:
-    - chroot $1 sh -c "useradd -m -s /bin/bash -u 4000 $IGconf_first_user_name"
+    - chroot $1 sh -c "useradd -m -s /bin/bash -u 4000 $IGconf_device_user1name"
     - |-
-      if [ -n "$IGconf_first_user_pass" ] ; then
-         chroot $1 sh -c "echo ${IGconf_first_user_name}:${IGconf_first_user_pass} | chpasswd"
+      if [ -n "$IGconf_device_user1pass" ] ; then
+         chroot $1 sh -c "echo ${IGconf_device_user1name}:${IGconf_device_user1pass} | chpasswd"
       fi
     - chroot $1 usermod --pass='*' root

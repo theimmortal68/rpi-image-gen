@@ -8,14 +8,14 @@ import copy
 import sys
 
 
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 
 
 IMAGE_KEYS = {"IGconf_device_class",
               "IGconf_device_variant",
               "IGconf_image_name",
               "IGconf_image_version",
-              "IGconf_image_outputdir"}
+              "IGconf_sys_outputdir"}
 
 
 top_template = {

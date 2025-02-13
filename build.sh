@@ -103,7 +103,7 @@ META_HOOKS="${IGTOP}/meta-hooks"
 RPI_TEMPLATES="${IGTOP}/templates/rpi"
 
 
-# Establish the top level directory hierarchy by first reading the config
+# Establish the top level directory hierarchy by detecting the config file
 if [[ -d "${EXT_DIR}/config" && -s "${EXT_DIR}/config/${INCONFIG}.cfg" ]] ; then
    IGTOP_CONFIG="${EXT_DIR}/config"
 elif [[ -s "${IGTOP}/config/${INCONFIG}.cfg" ]] ; then
@@ -112,44 +112,38 @@ else
    die "config "$INCONFIG" not found or invalid"
 fi
 
-msg "Reading $INCONFIG from $IGTOP_CONFIG with options [$INOPTIONS]"
+
 [[ -d $EXT_META ]] && msg "External meta at $EXT_META"
 [[ -d $EXT_NSMETA ]] && msg "External [$EXT_NS] meta at $EXT_NSMETA"
 
 
-# Defaults
-IGconf_device_class=pi5
-IGconf_device_variant=
-IGconf_image_version=$(date +%Y-%m-%d)
-IGconf_image_suffix=img
-IGconf_image_compression=none
-unset IGconf_apt_proxy
-IGconf_device_hostname=raspberrypi
-IGconf_first_user_name=pi
-unset IGconf_first_user_pass
-IGconf_locale_default="en_GB.UTF-8"
-IGconf_keyboard_keymap=gb
-IGconf_keyboard_layout="English (UK)"
-IGconf_timezone_default="Europe/London"
-unset IGconf_ext_dir
-unset IGconf_ext_nsdir
-unset IGconf_apt_keydir
-IGconf_sbom_output_format="spdx-json"
-IGconf_device_options="options"
-IGconf_image_options="options"
-
-
-# Provide external directory paths
+# Set via cmdline only
 [[ -d $EXT_DIR ]] && IGconf_ext_dir="$EXT_DIR"
 [[ -d $EXT_NSDIR ]] && IGconf_ext_nsdir="$EXT_NSDIR"
 
 
-read_config "${IGTOP_CONFIG}/${INCONFIG}.cfg"
+msg "Reading $INCONFIG from $IGTOP_CONFIG with options [$INOPTIONS]"
+
+# Load options first to perform explicit set/unset
+[[ -s "$INOPTIONS" ]] && apply_options "$INOPTIONS"
 
 
-# Config must provide
-[[ -z ${IGconf_image_layout+x} ]] && die "Config has no image layout"
-[[ -z ${IGconf_system_profile+x} ]] && die "Config has no system profile"
+# Merge config
+aggregate_config "${IGTOP_CONFIG}/${INCONFIG}.cfg"
+
+
+# Merge defaults
+aggregate_options "device" ${IGTOP_DEVICE}/build.defaults
+aggregate_options "image" ${IGTOP_IMAGE}/build.defaults
+aggregate_options "sys" ${IGTOP}/sys-build.defaults
+aggregate_options "sbom" ${IGTOP_SBOM}/defaults
+aggregate_options "meta" ${META}/defaults
+
+
+# Mandatory
+[[ -z ${IGconf_image_layout+x} ]] && die "No image layout provided"
+[[ -z ${IGconf_device_class+x} ]] && die "No device class provided"
+[[ -z ${IGconf_device_profile+x} ]] && die "No device profile provided"
 
 
 # Internalise hierarchy paths, prioritising the external sub-directory tree
@@ -159,8 +153,8 @@ read_config "${IGTOP_CONFIG}/${INCONFIG}.cfg"
 [[ -d $EXT_DIR ]] && IGIMAGE=$(realpath -e "${EXT_DIR}/image/$IGconf_image_layout" 2>/dev/null)
 : ${IGIMAGE:=${IGTOP_IMAGE}/$IGconf_image_layout}
 
-[[ -d $EXT_DIR ]] && IGPROFILE=$(realpath -e "${EXT_DIR}/profile/$IGconf_system_profile" 2>/dev/null)
-: ${IGPROFILE:=${IGTOP_PROFILE}/$IGconf_system_profile}
+[[ -d $EXT_DIR ]] && IGPROFILE=$(realpath -e "${EXT_DIR}/profile/$IGconf_device_profile" 2>/dev/null)
+: ${IGPROFILE:=${IGTOP_PROFILE}/$IGconf_device_profile}
 
 
 # Final path validation
@@ -170,31 +164,26 @@ for i in IGDEVICE IGIMAGE IGPROFILE ; do
 done
 
 
-# Load options allowing user options to always override
+# Now merge defaults for device and image
 IGDEVICE_OPT=$(realpath -e "${IGDEVICE}/$IGconf_device_options" 2>/dev/null)
 IGIMAGE_OPT=$(realpath -e "${IGIMAGE}/$IGconf_image_options" 2>/dev/null)
 [[ -s "$IGDEVICE_OPT" ]] && aggregate_options "device" "$IGDEVICE_OPT"
 [[ -s "$IGIMAGE_OPT" ]] && aggregate_options "image" "$IGIMAGE_OPT"
-[[ -s "$INOPTIONS" ]] && read_options "$INOPTIONS"
 
 
-# Remaining defaults
-: "${IGconf_device_variant:=none}"
-: "${IGconf_image_name:=${IGconf_device_class}-${IGconf_device_variant}-"${INCONFIG//\\/-}"-${IGconf_image_version}}"
-: "${IGconf_work_dir:=${IGTOP}/work/${IGconf_image_name}}"
-: "${IGconf_image_outputdir:=${IGconf_work_dir}/artefacts}"
-: "${IGconf_image_deploydir:=${IGconf_work_dir}/deploy}"
+# Lastly, reapply options to perform final overrides as necessary
+[[ -s "$INOPTIONS" ]] && apply_options "$INOPTIONS"
 
 
-# Assemble keys
-if [[ -z ${IGconf_apt_keydir+z} ]] ; then
-   IGconf_apt_keydir="${IGconf_work_dir}/keys"
-   mkdir -p "$IGconf_apt_keydir"
-   [[ -d /usr/share/keyrings ]] && rsync -a /usr/share/keyrings/ $IGconf_apt_keydir
-   [[ -d "$USER/.local/share/keyrings" ]] && rsync -a "$USER/.local/share/keyrings/" $IGconf_apt_keydir
-   rsync -a "$IGTOP/keydir/" $IGconf_apt_keydir
+# Assemble APT keys
+if [[ -z ${IGconf_sys_apt_keydir+z} ]] ; then
+   IGconf_sys_apt_keydir="${IGconf_sys_workdir}/keys"
+   mkdir -p "$IGconf_sys_apt_keydir"
+   [[ -d /usr/share/keyrings ]] && rsync -a /usr/share/keyrings/ $IGconf_sys_apt_keydir
+   [[ -d "$USER/.local/share/keyrings" ]] && rsync -a "$USER/.local/share/keyrings/" $IGconf_sys_apt_keydir
+   rsync -a "$IGTOP/keydir/" $IGconf_sys_apt_keydir
 fi
-[[ -d $IGconf_apt_keydir ]] || die "apt keydir $IGconf_apt_keydir is invalid"
+[[ -d $IGconf_sys_apt_keydir ]] || die "apt keydir $IGconf_sys_apt_keydir is invalid"
 
 
 # Assemble environment for rootfs and image creation, propagating IG variables
@@ -203,25 +192,24 @@ ENV_ROOTFS=()
 ENV_POST_BUILD=()
 for v in $(compgen -A variable -X '!IGconf*') ; do
    case $v in
-      IGconf_timezone_default)
-         ENV_ROOTFS+=('--env' IGconf_timezone_area="${!v%%/*}")
-         ENV_ROOTFS+=('--env' IGconf_timezone_city="${!v##*/}")
-         ENV_POST_BUILD+=(IGconf_timezone_area="${!v%%/*}")
-         ENV_POST_BUILD+=(IGconf_timezone_city="${!v##*/}")
+      IGconf_device_timezone)
+         ENV_ROOTFS+=('--env' ${v}="${!v}")
+         ENV_POST_BUILD+=(${v}="${!v}")
+         ENV_ROOTFS+=('--env' IGconf_device_timezone_area="${!v%%/*}")
+         ENV_ROOTFS+=('--env' IGconf_device_timezone_city="${!v##*/}")
+         ENV_POST_BUILD+=(IGconf_device_timezone_area="${!v%%/*}")
+         ENV_POST_BUILD+=(IGconf_device_timezone_city="${!v##*/}")
          ;;
-      IGconf_apt_proxy)
-         IGconf_apt_proxy_http="${!v}"
-         ;&
-      IGconf_apt_proxy_http)
+      IGconf_sys_apt_proxy_http)
          err=$(curl --head --silent --write-out "%{http_code}" --output /dev/null "${!v}")
-         [[ $? -ne 0 ]] && die "unreachable proxy : ${!v}"
+         [[ $? -ne 0 ]] && die "unreachable proxy: ${!v}"
          msg "$err ${!v}"
          ENV_ROOTFS+=('--aptopt' "Acquire::http { Proxy \"${!v}\"; }")
-         ENV_ROOTFS+=('--env' IGconf_apt_proxy_http="${!v}")
+         ENV_ROOTFS+=('--env' ${v}="${!v}")
          ;;
-      IGconf_apt_keydir)
+      IGconf_sys_apt_keydir)
          ENV_ROOTFS+=('--aptopt' "Dir::Etc::TrustedParts ${!v}")
-         ENV_ROOTFS+=('--env' IGconf_apt_keydir="${!v}")
+         ENV_ROOTFS+=('--env' ${v}="${!v}")
          ;;
       IGconf_ext_dir|IGconf_ext_nsdir )
          ENV_ROOTFS+=('--env' ${v}="${!v}")
@@ -251,8 +239,29 @@ done
 
 # Final PATH setup
 ENV_ROOTFS+=('--env' PATH="${IGTOP}/bin:$PATH")
-mkdir -p ${IGconf_work_dir}/host/bin
-ENV_POST_BUILD+=(PATH="${IGTOP}/bin:${IGconf_work_dir}/host/bin:${PATH}")
+mkdir -p ${IGconf_sys_workdir}/host/bin
+ENV_POST_BUILD+=(PATH="${IGTOP}/bin:${IGconf_sys_workdir}/host/bin:${PATH}")
+
+
+# Load layer default settings and append layer to list
+layer_push()
+{
+   if [[ -n $EXT_NSMETA && -s "${EXT_NSMETA}/$1.yaml" ]] ; then
+      [[ -f "${EXT_NSMETA}/$1.defaults" ]] && aggregate_options "meta" "${EXT_NSMETA}/$1.defaults"
+      ARGS_LAYERS+=('--config' "${EXT_NSMETA}/$1.yaml")
+
+   elif [[ -n $EXT_META && -s "${EXT_META}/$1.yaml" ]] ; then
+      [[ -f "${EXT_META}/$1.defaults" ]] && aggregate_options "meta" "${EXT_META}/$1.defaults"
+      ARGS_LAYERS+=('--config' "${EXT_META}/$1.yaml")
+
+   elif [[ -s "${META}/$1.yaml" ]] ; then
+      [[ -f "${META}/$1.defaults" ]] && aggregate_options "meta" "${META}/$1.defaults"
+      ARGS_LAYERS+=('--config' "${META}/$1.yaml")
+
+   else
+      die "Invalid meta specifier: $1 (not found)"
+   fi
+}
 
 
 # Assemble meta layers from profile
@@ -260,15 +269,7 @@ ARGS_LAYERS=()
 while read -r line; do
    [[ "$line" =~ ^#.*$ ]] && continue
    [[ "$line" =~ ^$ ]] && continue
-   if [[ -n $EXT_NSMETA && -s ${EXT_NSMETA}/$line.yaml ]] ; then
-      ARGS_LAYERS+=('--config' "${EXT_NSMETA}/$line.yaml")
-   elif [[ -n $EXT_META && -s ${EXT_META}/$line.yaml ]] ; then
-      ARGS_LAYERS+=('--config' "${EXT_META}/$line.yaml")
-   elif [[ -s ${META}/$line.yaml ]] ; then
-      ARGS_LAYERS+=('--config' "${META}/$line.yaml")
-   else
-      die "Invalid meta specifier: $line (not found)"
-   fi
+   layer_push "$line"
 done < "${IGPROFILE}"
 
 
@@ -304,29 +305,29 @@ fi
    --force \
    --name "$IGconf_image_name" \
    --hostname "$IGconf_device_hostname" \
-   --output "$IGconf_image_outputdir" \
-   --target "${IGconf_work_dir}/rootfs" \
-   --setup-hook 'bin/runner setup "${IGconf_work_dir}/rootfs"' \
-   --essential-hook 'bin/runner essential "${IGconf_work_dir}/rootfs"' \
-   --customize-hook 'bin/runner customize "${IGconf_work_dir}/rootfs"' \
-   --cleanup-hook 'bin/runner cleanup "${IGconf_work_dir}/rootfs"'
+   --output "$IGconf_sys_outputdir" \
+   --target "${IGconf_sys_workdir}/rootfs" \
+   --setup-hook 'bin/runner setup "${IGconf_sys_workdir}/rootfs"' \
+   --essential-hook 'bin/runner essential "${IGconf_sys_workdir}/rootfs"' \
+   --customize-hook 'bin/runner customize "${IGconf_sys_workdir}/rootfs"' \
+   --cleanup-hook 'bin/runner cleanup "${IGconf_sys_workdir}/rootfs"'
 
 
 # post-build: apply rootfs overlays - image layout then device
 if [ -d ${IGIMAGE}/device/rootfs-overlay ] ; then
-   run rsync -a ${IGIMAGE}/device/rootfs-overlay/ ${IGconf_work_dir}/rootfs
+   run rsync -a ${IGIMAGE}/device/rootfs-overlay/ ${IGconf_sys_workdir}/rootfs
 fi
 if [ -d ${IGDEVICE}/device/rootfs-overlay ] ; then
-   run rsync -a ${IGDEVICE}/device/rootfs-overlay/ ${IGconf_work_dir}/rootfs
+   run rsync -a ${IGDEVICE}/device/rootfs-overlay/ ${IGconf_sys_workdir}/rootfs
 fi
 
 
 # post-build: hooks - image layout then device
 if [ -x ${IGIMAGE}/post-build.sh ] ; then
-   runh ${IGIMAGE}/post-build.sh ${IGconf_work_dir}/rootfs
+   runh ${IGIMAGE}/post-build.sh ${IGconf_sys_workdir}/rootfs
 fi
 if [ -x ${IGDEVICE}/post-build.sh ] ; then
-   runh ${IGDEVICE}/post-build.sh ${IGconf_work_dir}/rootfs
+   runh ${IGDEVICE}/post-build.sh ${IGconf_sys_workdir}/rootfs
 fi
 
 
@@ -335,9 +336,9 @@ fi
 
 # pre-image: hooks - device has priority over image layout
 if [ -x ${IGDEVICE}/pre-image.sh ] ; then
-   runh ${IGDEVICE}/pre-image.sh ${IGconf_work_dir}/rootfs ${IGconf_image_outputdir}
+   runh ${IGDEVICE}/pre-image.sh ${IGconf_sys_workdir}/rootfs ${IGconf_sys_outputdir}
 elif [ -x ${IGIMAGE}/pre-image.sh ] ; then
-   runh ${IGIMAGE}/pre-image.sh ${IGconf_work_dir}/rootfs ${IGconf_image_outputdir}
+   runh ${IGIMAGE}/pre-image.sh ${IGconf_sys_workdir}/rootfs ${IGconf_sys_outputdir}
 else
    die "no pre-image hook"
 fi
@@ -345,22 +346,22 @@ fi
 
 # SBOM
 if [ -x ${IGTOP_SBOM}/gen.sh ] ; then
-   runh ${IGTOP_SBOM}/gen.sh ${IGconf_work_dir}/rootfs ${IGconf_image_outputdir}
+   runh ${IGTOP_SBOM}/gen.sh ${IGconf_sys_workdir}/rootfs ${IGconf_sys_outputdir}
 fi
 
 
 GTMP=$(mktemp -d)
 trap 'rm -rf $GTMP' EXIT
-mkdir -p "$IGconf_image_deploydir"
+mkdir -p "$IGconf_sys_deploydir"
 
 
 # Generate image(s)
-for f in "${IGconf_image_outputdir}"/genimage*.cfg; do
+for f in "${IGconf_sys_outputdir}"/genimage*.cfg; do
    run podman unshare env "${ENV_POST_BUILD[@]}" genimage \
-      --rootpath ${IGconf_work_dir}/rootfs \
+      --rootpath ${IGconf_sys_workdir}/rootfs \
       --tmppath $GTMP \
-      --inputpath ${IGconf_image_outputdir}   \
-      --outputpath ${IGconf_image_outputdir} \
+      --inputpath ${IGconf_sys_outputdir}   \
+      --outputpath ${IGconf_sys_outputdir} \
       --loglevel=1 \
       --config $f | pv -t -F 'Generating image...%t' || die "genimage error"
 done
@@ -368,9 +369,9 @@ done
 
 # post-image: hooks - device has priority over image layout
 if [ -x ${IGDEVICE}/post-image.sh ] ; then
-   runh ${IGDEVICE}/post-image.sh $IGconf_image_deploydir
+   runh ${IGDEVICE}/post-image.sh $IGconf_sys_deploydir
 elif [ -x ${IGIMAGE}/post-image.sh ] ; then
-   runh ${IGIMAGE}/post-image.sh $IGconf_image_deploydir
+   runh ${IGIMAGE}/post-image.sh $IGconf_sys_deploydir
 else
-   runh ${IGTOP_IMAGE}/post-image.sh $IGconf_image_deploydir
+   runh ${IGTOP_IMAGE}/post-image.sh $IGconf_sys_deploydir
 fi
