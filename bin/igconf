@@ -26,6 +26,7 @@ check_y()
          ;;
       esac
    done
+   return 0
 }
 
 check_n()
@@ -40,6 +41,7 @@ check_n()
          ;;
       esac
    done
+   return 0
 }
 
 
@@ -64,6 +66,10 @@ case "$op" in
    is_set)
       check_set "${vars[@]}"
       exit $?
+      ;;
+   is_nset)
+      check_set "${vars[@]}"
+      exit $((1 - $?))
       ;;
    *)
       ;;

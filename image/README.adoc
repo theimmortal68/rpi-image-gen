@@ -14,7 +14,7 @@ This directory contains the 'in-tree' image layouts supported by rpi-image-gen.
 
 |===
 
-For detailed information about a particular layout, including configuration options, please refer to documentation within the appropriate layout sub-directory.
+For detailed information about a particular layout, including configuration options and defaults, please refer to documentation within the appropriate layout sub-directory.
 
 == Notes
 
@@ -57,4 +57,4 @@ Options
 image_boot_part_size=200%
 ----
 
-The options file in the appropriate image layout sub-directory defines the default values of the supported configuration variables.
+Each image layout sub-directory contains a file which specifies the default values of its supported configuration variables.

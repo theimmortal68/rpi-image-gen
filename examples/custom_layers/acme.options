@@ -3,6 +3,6 @@ acme_keydir=/path/to/dir
 # Empty lines are supported
 
 device_hostname=acme-devhost
-first_user_name=acmedev
-first_user_pass=roadrunner
+device_user1name=acmedev
+device_user1pass=roadrunner
 acme_dev_server=build.acme.org
