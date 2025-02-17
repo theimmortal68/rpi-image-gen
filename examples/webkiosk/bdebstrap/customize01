@@ -8,8 +8,8 @@ APP="/usr/bin/chromium-browser https://raspberrypi.com https://time.is/London --
 
 # Write out our systemd kiosk service
 cat ../kiosk.service.tpl | sed \
-   -e "s|<KIOSK_USER>|$IGconf_device_user1name|g" \
-   -e "s|<KIOSK_RUNDIR>|\/home\/$IGconf_device_user1name|g" \
+   -e "s|<KIOSK_USER>|$IGconf_device_user1|g" \
+   -e "s|<KIOSK_RUNDIR>|\/home\/$IGconf_device_user1|g" \
    -e "s|<KIOSK_APP>|$APP|g" \
    > $1/etc/systemd/system/kiosk.service
 
