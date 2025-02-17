@@ -270,14 +270,14 @@ Via the Options file or a supported Config file section, it is possible to defin
 Environment
 
 ----
-IGconf_device_user1name=pi
+IGconf_device_user1=pi
 ----
 
 Config
 
 ----
 [device]
-user1name=rasp
+user1=rasp
 
 [sys]
 flavour=debug
@@ -290,7 +290,7 @@ Options
 
 ----
 sys_debug_port=
-sys_debug_user=$IGconf_user1name
+sys_debug_user=$IGconf_user1
 sys_debugger=disabled
 ----
 
