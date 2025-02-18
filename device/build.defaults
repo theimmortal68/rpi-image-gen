@@ -34,3 +34,7 @@ timezone="Europe/London"
 
 # The profile used to construct the device root filesystem
 profile=
+
+# If y, automatically include net-misc/openssh-server in the profile to enable
+# SSH access to the device via user1.
+ssh_user1=n
