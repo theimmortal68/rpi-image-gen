@@ -1,13 +1,15 @@
+# Functions available to the rpi-image-gen core and wider system
+
 msg() {
    date +"[%T] $*"
 }
 export -f msg
 
 
-log (){
-  msg "$*" | tee -a "${LOG_FILE}"
-}
-export -f log
+#log (){
+#  msg "$*" | tee -a "${LOG_FILE}"
+#}
+#export -f log
 
 
 err (){
@@ -29,7 +31,7 @@ run()
    _ret=$?
    if [[ $_ret -ne 0 ]]
    then
-      die "Error: ["$@"] ($_ret)"
+      die "Error: [$*] ($_ret)"
    fi
 }
 export -f run
@@ -44,281 +46,8 @@ rund()
       _ret=$?
       if [[ $_ret -ne 0 ]]
       then
-         die "Error: ["$@"] ($_ret)"
+         die "Error: [$*] ($_ret)"
       fi
    fi
 }
 export -f rund
-
-
-bootstrap(){
-	local BOOTSTRAP_CMD=debootstrap
-	local BOOTSTRAP_ARGS=()
-
-	export http_proxy=${APT_PROXY}
-
-	BOOTSTRAP_ARGS+=(--arch armhf)
-	BOOTSTRAP_ARGS+=(--components "main,contrib,non-free")
-	BOOTSTRAP_ARGS+=(--keyring "${STAGE_DIR}/files/raspberrypi.gpg")
-	BOOTSTRAP_ARGS+=(--exclude=info)
-	BOOTSTRAP_ARGS+=(--include=ca-certificates)
-	BOOTSTRAP_ARGS+=("$@")
-	printf -v BOOTSTRAP_STR '%q ' "${BOOTSTRAP_ARGS[@]}"
-
-	setarch linux32 capsh $CAPSH_ARG -- -c "'${BOOTSTRAP_CMD}' $BOOTSTRAP_STR" || true
-
-	if [ -d "$2/debootstrap" ] && ! rmdir "$2/debootstrap"; then
-		cp "$2/debootstrap/debootstrap.log" "${STAGE_WORK_DIR}"
-		log "bootstrap failed: please check ${STAGE_WORK_DIR}/debootstrap.log"
-		return 1
-	fi
-}
-export -f bootstrap
-
-bootstrap64(){
-   local BOOTSTRAP_CMD=debootstrap
-   local BOOTSTRAP_ARGS=()
-
-   export http_proxy=${APT_PROXY}
-
-   BOOTSTRAP_ARGS+=(--arch arm64)
-   BOOTSTRAP_ARGS+=(--include gnupg)
-   BOOTSTRAP_ARGS+=(--components "main,contrib,non-free")
-   #BOOTSTRAP_ARGS+=(--keyring "${STAGE_DIR}/files/raspberrypi.gpg")
-   BOOTSTRAP_ARGS+=(--exclude=info)
-   BOOTSTRAP_ARGS+=(--include=ca-certificates)
-   BOOTSTRAP_ARGS+=("$@")
-   printf -v BOOTSTRAP_STR '%q ' "${BOOTSTRAP_ARGS[@]}"
-
-   capsh $CAPSH_ARG -- -c "'${BOOTSTRAP_CMD}' $BOOTSTRAP_STR" || true
-
-   if [ -d "$2/debootstrap" ] && ! rmdir "$2/debootstrap"; then
-      cp "$2/debootstrap/debootstrap.log" "${STAGE_WORK_DIR}"
-      log "bootstrap failed: please check ${STAGE_WORK_DIR}/debootstrap.log"
-      return 1
-   fi
-}
-export -f bootstrap64
-
-copy_previous(){
-	if [ ! -d "${PREV_ROOTFS_DIR}" ]; then
-		echo "Previous stage rootfs not found"
-		false
-	fi
-	mkdir -p "${ROOTFS_DIR}"
-	rsync -aHAXx --exclude var/cache/apt/archives "${PREV_ROOTFS_DIR}/" "${ROOTFS_DIR}/"
-}
-export -f copy_previous
-
-unmount(){
-	if [ -z "$1" ]; then
-		DIR=$PWD
-	else
-		DIR=$1
-	fi
-
-	for i in {1..6}; do
-		if awk "\$2 ~ /^${DIR//\//\\/}/ {print \$2}" /etc/mtab | sort -r | xargs -r umount; then
-			break
-		elif [ "$i" -eq 6 ]; then
-			log "Failed to unmount ${DIR}. Do not try to delete this directory while it contains mountpoints!"
-			return 1
-		fi
-		log "Retrying ($i/5)..."
-		sleep 1
-	done
-}
-export -f unmount
-
-unmount_image(){
-	if command -v udevadm >/dev/null 2>&1; then
-		udevadm settle 10
-	else
-		sleep 1
-	fi
-	LOOP_DEVICE=$(losetup -n -O NAME -j "$1")
-	if [ -n "$LOOP_DEVICE" ]; then
-		for part in "$LOOP_DEVICE"p*; do
-			if DIR=$(findmnt -n -o target -S "$part"); then
-				unmount "$DIR"
-			fi
-		done
-		losetup -d "$LOOP_DEVICE"
-	fi
-}
-export -f unmount_image
-
-on_chroot() {
-	if ! mount | grep -q "$(realpath "${ROOTFS_DIR}"/proc)"; then
-		mount -t proc proc "${ROOTFS_DIR}/proc"
-	fi
-
-	if ! mount | grep -q "$(realpath "${ROOTFS_DIR}"/dev)"; then
-		mount --bind /dev "${ROOTFS_DIR}/dev"
-	fi
-	
-	if ! mount | grep -q "$(realpath "${ROOTFS_DIR}"/dev/pts)"; then
-		mount --bind /dev/pts "${ROOTFS_DIR}/dev/pts"
-	fi
-
-	if ! mount | grep -q "$(realpath "${ROOTFS_DIR}"/sys)"; then
-		mount --bind /sys "${ROOTFS_DIR}/sys"
-	fi
-
-	if ! mount | grep -q "$(realpath "${ROOTFS_DIR}"/run)"; then
-		mount -t tmpfs  tmpfs "${ROOTFS_DIR}/run"
-	fi
-
-	if ! mount | grep -q "$(realpath "${ROOTFS_DIR}"/tmp)"; then
-		mount -t tmpfs  tmpfs "${ROOTFS_DIR}/tmp"
-	fi
-
-	setarch linux32 capsh $CAPSH_ARG "--chroot=${ROOTFS_DIR}/" -- -e "$@"
-}
-export -f on_chroot
-
-update_issue() {
-	echo -e "${PI_GEN_RELEASE} ${IMG_DATE}\nGenerated using ${PI_GEN}, ${PI_GEN_REPO}, ${GIT_HASH}, ${1}" > "${ROOTFS_DIR}/etc/rpi-issue"
-}
-export -f update_issue
-
-ensure_next_loopdev() {
-	local loopdev
-	loopdev="$(losetup -f)"
-	loopmaj="$(echo "$loopdev" | sed -E 's/.*[^0-9]*?([0-9]+)$/\1/')"
-	[[ -b "$loopdev" ]] || mknod "$loopdev" b 7 "$loopmaj"
-}
-export -f ensure_next_loopdev
-
-ensure_loopdev_partitions() {
-	local line
-	local partition
-	local majmin
-	lsblk -r -n -o "NAME,MAJ:MIN" "$1" | grep -v "^${1#/dev/} " | while read -r line; do
-		partition="${line%% *}"
-		majmin="${line#* }"
-		if [ ! -b "/dev/$partition" ]; then
-			mknod "/dev/$partition" b "${majmin%:*}" "${majmin#*:}"
-		fi
-	done
-	command -v udevadm >/dev/null 2>&1 || return 0
-	udevadm settle 10
-}
-export -f ensure_loopdev_partitions
-
-
-# If a variable is unset, or set to the empty string, initialise it
-assignv() {
-   local var="$1"
-   local val="$2"
-   if [ -z "${!var+x}" ] || [ -z "${!var-x}" ] ; then
-      if [[ "$val" =~ ^$ ]] ; then
-         eval unset "${var}"
-      else
-         eval "${var}"="$val"
-      fi
-   fi
-}
-
-
-# .ini file section parser reading key value pairs into the env as shell variables
-# initialising them only if their fully qualified equivalent is not set.
-# key names will be prefixed with section name and converted to lower case, e.g.
-#
-# [mysection]
-# foo=zzz
-# BAR=yyy
-#
-# will yield:
-# IGconf_mysection_foo=zzz
-# IGconf_mysection_bar=yyy
-#
-merge_config_section() {
-   local section=$1
-   local cfg=$2
-   local attrs=$(crudini --get --format=sh $cfg $section 2>/dev/null)
-   if [ $? -eq 0 ] ; then
-      while IFS="=" read -r key value ; do
-         [[ "$key" =~ ^#.*$ ]] && continue
-         [[ "$key" =~ ^$ ]] && continue
-         local var=IGconf_"${section}"_"${key,,}"
-         assignv "$var" "$value"
-      done < <(printf '%s\n' "$attrs")
-   fi
-}
-
-
-# Read a config file and aggregate settings. Included config files will be read
-# from the directory of the current config file.
-aggregate_config() {
-   local cfg=$(realpath -m "$1" 2>/dev/null)
-   test -s "$cfg" || die "Invalid config: $cfg"
-   while read -r w1 w2; do
-    [[ "$w1" =~ ^#.*$ ]] && continue
-    [[ "$w1" =~ ^$ ]] && continue
-    case $w1 in
-       include)
-         [[ $(basename $cfg) ==  $(basename $w2) ]] && die "Recursive include: $cfg"
-         aggregate_config "$(dirname $cfg)/$w2"
-         ;;
-       *)
-         ;;
-    esac
-   done < "$cfg"
-
-   merge_config_section device "$cfg"
-   merge_config_section image "$cfg"
-   merge_config_section sys "$cfg"
-   merge_config_section sbom "$cfg"
-   merge_config_section meta "$cfg"
-}
-export -f aggregate_config
-
-
-# shell variable list parser reading key value pairs into the env. key names
-# will be prefixed and converted to lower case, e.g.
-#
-# foo=zzz
-# BAR=yyy
-#
-# will yield:
-# IGconf_foo=zzz
-# IGconf_bar=yyy
-#
-apply_options() {
-   if [[ $# -eq 1 && -f $1 ]] ; then
-      local attrs=$(cat $1)
-   else
-      local attrs=$(cat)
-   fi
-   while IFS="=" read -r key value ; do
-      [[ "$key" =~ ^#.*$ ]] && continue
-      [[ "$key" =~ ^$ ]] && continue
-      if [[ "$value" =~ ^$ ]] ; then
-         eval unset IGconf_"${key,,}"
-      else
-         eval IGconf_"${key,,}"="$value"
-      fi
-   done < <(printf '%s\n' "$attrs")
-}
-export -f apply_options
-
-
-# shell variable list parser with prefix that reads key value pairs into the env
-# as above, but only if the fully qualified IGconf key is not set or set to the
-# empty string.
-aggregate_options() {
-   if [[ $# -eq 2 && -f $2 ]] ; then
-      local attrs=$(cat $2)
-   else
-      local attrs=$(cat)
-   fi
-   local section="${1,,}"
-   while IFS="=" read -r key value ; do
-      [[ "$key" =~ ^#.*$ ]] && continue
-      [[ "$key" =~ ^$ ]] && continue
-      local var=IGconf_"${section}"_"${key,,}"
-      assignv "$var" "$value"
-   done < <(printf '%s\n' "$attrs")
-}
-export -f aggregate_options

@@ -4,9 +4,11 @@ set -uo pipefail
 
 IGTOP=$(readlink -f "$(dirname "$0")")
 
-source "${IGTOP}/scripts/common"
 source "${IGTOP}/scripts/dependencies_check"
 dependencies_check "${IGTOP}/depends" || exit 1
+source "${IGTOP}/scripts/common"
+source "${IGTOP}/scripts/core"
+source "${IGTOP}/bin/igconf"
 
 
 # Defaults
@@ -176,7 +178,7 @@ IGIMAGE_OPT=$(realpath -e "${IGIMAGE}/$IGconf_image_options" 2>/dev/null)
 
 
 # Assemble APT keys
-if [[ -z ${IGconf_sys_apt_keydir+z} ]] ; then
+if igconf_isnset sys_apt_keydir ; then
    IGconf_sys_apt_keydir="${IGconf_sys_workdir}/keys"
    mkdir -p "$IGconf_sys_apt_keydir"
    [[ -d /usr/share/keyrings ]] && rsync -a /usr/share/keyrings/ $IGconf_sys_apt_keydir

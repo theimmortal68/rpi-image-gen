@@ -4,6 +4,6 @@ set -u
 
 # User role and management operations
 
-if igconf is_y meta_docker_trust_user1 ; then
+if igconf isy meta_docker_trust_user1 ; then
    chroot $1 sh -c "adduser $IGconf_device_user1 docker"
 fi

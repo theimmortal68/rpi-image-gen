@@ -1,12 +1,33 @@
 #!/bin/bash
 
-set -u
+# This script can be sourced so the macros below can be utilised (although
+# scope is intentionally limited to the current process) or it can be run.
 
-[[ $# -lt 1 ]] && exit 1
-
-check_set()
+igconf_tr()
 {
-   for v in "$@"; do
+   local prefix="$1"
+   shift
+   local args=()
+   local vars=()
+   for arg in "$@" ; do
+      if [ -n "${prefix}" ]; then
+         args+=("${prefix}_${arg}")
+      else
+         args+=("$arg")
+      fi
+   done
+   for v in "${args[@]}" ; do
+      v="${v#IGconf_}"
+      vars+=("IGconf_${v,,}")
+   done
+   if (( ${#vars[@]} )); then
+      printf '%s\n' "${vars[@]}"
+   fi
+}
+
+igconf_isset()
+{
+   for v in $(igconf_tr "" "$@") ; do
       if [ -z ${!v+x} ]; then
          return 1 # unset
       fi
@@ -14,10 +35,22 @@ check_set()
     return 0
 }
 
-check_y()
+igconf_isnset()
 {
-   check_set "$@" || return 1
-   for v in "$@"; do
+   for v in $(igconf_tr "" "$@") ; do
+      if [ -z ${!v+x} ]; then
+         :
+      else
+         return 1 # set
+      fi
+    done
+    return 0
+}
+
+igconf_isy()
+{
+   igconf_isset "$@" || return 1
+   for v in $(igconf_tr "" "$@") ; do
       case ${!v,,} in
          y|yes)
             ;;
@@ -29,10 +62,10 @@ check_y()
    return 0
 }
 
-check_n()
+igconf_isn()
 {
-   check_set "$@" || return 1
-   for v in "$@"; do
+   igconf_isset "$@" || return 1
+   for v in $(igconf_tr "" "$@") ; do
       case ${!v,,} in
          n|no)
             ;;
@@ -44,35 +77,33 @@ check_n()
    return 0
 }
 
+igconf_isval()
+{
+   igconf_isset "$@" || return 1
+   for v in $(igconf_tr "" "$@") ; do
+      if [ -z "${!v}" ]; then
+         return 1 # empty
+      fi
+    done
+    return 0
+}
 
-op="$1"
-shift 1
 
-vars=()
-for v in "$@" ; do
-   v="${v#IGconf_}"
-   vars+=("IGconf_${v}")
-done
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]] ; then
+   set -u
 
-case "$op" in
-   is_y)
-      check_y "${vars[@]}"
-      exit $?
-      ;;
-   is_n)
-      check_n "${vars[@]}"
-      exit $?
-      ;;
-   is_set)
-      check_set "${vars[@]}"
-      exit $?
-      ;;
-   is_nset)
-      check_set "${vars[@]}"
-      exit $((1 - $?))
-      ;;
-   *)
-      ;;
-esac
+   [[ $# -lt 1 ]] && exit 1
 
-exit 1
+   op="$1"
+   shift 1
+
+   case "$op" in
+      isy|isn|isset|isnset|isval)
+         igconf_"$op" "$@"
+         exit $?
+         ;;
+      *)
+         ;;
+   esac
+   exit 1
+fi
