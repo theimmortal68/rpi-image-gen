@@ -17,3 +17,4 @@ newuidmap:uidmap
 python-is-python3
 dbus-user-session
 btrfs-progs
+dctrl-tools
