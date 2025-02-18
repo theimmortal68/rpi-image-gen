@@ -275,6 +275,12 @@ while read -r line; do
 done < "${IGPROFILE}"
 
 
+# Auto-selected layers
+if igconf_isy device_ssh_user1 ; then
+   layer_push net-misc/openssh-server
+fi
+
+
 # hook execution
 runh()
 {

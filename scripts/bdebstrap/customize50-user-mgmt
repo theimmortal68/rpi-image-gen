@@ -7,3 +7,11 @@ set -u
 if igconf isy meta_docker_trust_user1 ; then
    chroot $1 sh -c "adduser $IGconf_device_user1 docker"
 fi
+
+if igconf isval meta_ssh_pubkey_user1 ; then
+   chroot $1 bash -- <<- EOCHROOT
+   chown -R ${IGconf_device_user1}:${IGconf_device_user1} /home/${IGconf_device_user1}/.ssh
+   chmod 0700 /home/${IGconf_device_user1}/.ssh
+   chmod 0600 /home/${IGconf_device_user1}/.ssh/authorized_keys
+EOCHROOT
+fi
