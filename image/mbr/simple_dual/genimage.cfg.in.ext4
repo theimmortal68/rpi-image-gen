@@ -26,11 +26,11 @@ image <IMAGE_DIR>/<IMAGE_NAME>.<IMAGE_SUFFIX> {
 image boot.vfat {
    vfat {
       label = "BOOT"
-      extraargs = "-s 4 -S 512"
+      extraargs = "-s 4 -S 512 -i <BOOT_UUID>"
    }
    size = <FW_SIZE>
    mountpoint = "/boot/firmware"
-   exec-pre = "<SETUP> BOOT"
+   exec-pre = "<SETUP> BOOT <BOOT_UUID> <ROOT_UUID>"
 }
 
 image root.ext4 {
@@ -38,8 +38,9 @@ image root.ext4 {
       label = "ROOT"
       use-mke2fs = true
       mke2fs-conf = <MKE2FSCONF>
+      extraargs = "-U <ROOT_UUID>"
    }
    size = <ROOT_SIZE>
    mountpoint = "/"
-   exec-pre = "<SETUP> ROOT"
+   exec-pre = "<SETUP> ROOT <BOOT_UUID> <ROOT_UUID>"
 }
