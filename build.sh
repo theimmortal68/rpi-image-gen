@@ -213,6 +213,9 @@ for v in $(compgen -A variable -X '!IGconf*') ; do
          ENV_ROOTFS+=('--aptopt' "Dir::Etc::TrustedParts ${!v}")
          ENV_ROOTFS+=('--env' ${v}="${!v}")
          ;;
+      IGconf_sys_apt_get_purge)
+         if igconf_isy $v ; then ENV_ROOTFS+=('--aptopt' "APT::Get::Purge true") ; fi
+         ;;
       IGconf_ext_dir|IGconf_ext_nsdir )
          ENV_ROOTFS+=('--env' ${v}="${!v}")
          ENV_POST_BUILD+=(${v}="${!v}")
