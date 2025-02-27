@@ -5,6 +5,9 @@
 # `apt-cacher` or similar package for development.
 apt_proxy_http=
 
+# If y, APT operations in the chroot will purge by default. Refer to apt-get(8)
+apt_get_purge=y
+
 # Root of the directory hierarchy containing rpi-image-gen build artefacts.
 # Note, depending on the system being built, this directory can amount to a
 # substantial amount of consumed disk space.
