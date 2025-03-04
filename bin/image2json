@@ -8,7 +8,7 @@ import copy
 import sys
 
 
-VERSION = "1.0.2"
+VERSION = "1.1.2"
 
 
 IMAGE_KEYS = {"IGconf_device_class",
@@ -21,6 +21,9 @@ IMAGE_KEYS = {"IGconf_device_class",
 top_template = {
     "version": VERSION,
     "meta": [],
+    "attributes": {
+        "image-size": "0",
+    },
     "layout": {
         "partition-table-type": "none",
         "partitions": []
@@ -51,122 +54,205 @@ def get_vfat_uuid(extraargs):
     return None
 
 
+# genimage key value mapping
+def map_genimage(key, value):
+    gmap = {
+        # https://github.com/pengutronix/genimage#the-image-section
+        "partition-type-uuid":{
+            ("L", "linux"):       "0fc63daf-8483-4772-8e79-3d69d8477de4",
+            ("S", "swap"):        "0657fd6d-a4ab-43c4-84e5-0933c84b4f4f",
+            ("H", "home"):        "933ac7e1-2eb4-4f13-b844-0e14e2aef915",
+            ("U", "esp", "uefi"): "c12a7328-f81f-11d2-ba4b-00a0c93ec93b",
+            ("R", "raid"):        "a19d880f-05fc-4d3b-a006-743f0f84911e",
+            ("V", "lvm"):         "e6d6d379-f507-44c2-a23c-238f2a3df928",
+            ("F", "fat32"):       "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7"
+        }
+    }
+    if key in gmap:
+        translations = gmap[key]
+        for possible_values, translated_value in translations.items():
+            if value in possible_values:
+                return translated_value
 
-# Read genimage config in two passes - first image then partitions. Then merge
-# them using the image referenced by the partition if there is one.
-def parse_genimage_config(config_path):
-    with open(config_path, "r") as f:
-        config_text = f.read()
-
-    sections = re.split(r"(\bimage\b|\bpartition\b) (\S+) {", config_text)
-    images = {}
-    partitions = []
-    ptable_type = "none"
-
-    # First Pass: parse image sections and store all attributes, exclude don't cares
-    for i in range(1, len(sections), 3):
-        section_type, section_name, content = sections[i:i+3]
-        attributes = parse_attributes(content, {"exec-pre", "exec-post"})
-
-        # Detect image type
-        # https://github.com/pengutronix/genimage#the-image-configuration-options
-        img_block = re.search(r"(\w+) {\s*(.*?)\s*}", content, re.DOTALL)
-        if img_block:
-            img_type, img_content = img_block.groups()
-            img_attributes = parse_attributes(img_content)
-            img_attributes["type"] = img_type  # store type
-
-            # extraargs specifies additional attributes, eg uuid
-            if "extraargs" in img_attributes:
-                match img_attributes["type"]:
-                    case "ext2"|"ext3"|"ext4"|"btrfs":
-                        fs_uuid = get_extfs_uuid(img_attributes["extraargs"])
-                    case "vfat":
-                        fs_uuid = get_vfat_uuid(img_attributes["extraargs"])
-                    case _:
-                        pass
-                if fs_uuid:
-                    img_attributes["uuid"] = fs_uuid
-
-            # Store attributes
-            attributes.update(img_attributes)
-
-        if img_attributes["type"] == "hdimage" and img_attributes["partition-table-type"]:
-            ptable_type = img_attributes["partition-table-type"]
-
-        if section_type == "image":
-            images[section_name] = attributes  # store attr for second pass
-
-    # Second Pass: parse partitions and merge attributes
-    for i in range(1, len(sections), 3):
-        section_type, section_name, content = sections[i:i+3]
-        if section_type != "partition":
-            continue  # skip images (already processed)
-
-        content = content.split("}", 1)[0].strip()
-        attributes = parse_attributes(content)
-        attributes["name"] = section_name
-
-        # Merge attributes from the associated image
-        if "image" in attributes and attributes["image"] in images:
-            inherited_image = images[attributes["image"]]
-            attributes.update({k: v for k, v in inherited_image.items() if k not in attributes})
-
-        new_partition = copy.deepcopy(partition_template)
-        merged = {**new_partition, **attributes}
-        partitions.append(merged)
-
-    return (ptable_type, partitions)
+    return value
 
 
-# Extract key value pairs from a section, support multi-word values, nested {} sub-sections not supported
-def parse_attributes(content, exclude_keys=None):
+# General single line based key value reader with options
+def read_kv(line, exclude_keys=None, translate_fn=None):
     if exclude_keys is None:
         exclude_keys = set() # Default - no exclusions
 
-    attributes = {}
-    for match in re.finditer(r"^\s*([\w-]+)\s*=\s*(\"[^\"]*\"|'[^']*'|[^#\n]+)", content, re.MULTILINE):
+    for match in re.finditer(r"^\s*([\w-]+)\s*=\s*(\"[^\"]*\"|'[^']*'|[^#\n]+)", line, re.MULTILINE):
         key, value = match.groups()
         if key in exclude_keys:
-            continue # skip excluded
+            return (None, None)
 
-        # Map attributes here as needed
         value = value.strip().strip('"').strip("'") # Remove quotes if present
-        mapped_value = value
 
-        match key.lower():
-            case "partition-type-uuid":
-                # https://github.com/pengutronix/genimage#the-image-section
-                match value.upper():
-                    case "L" | "linux":
-                        mapped_value = "0fc63daf-8483-4772-8e79-3d69d8477de4"
-                    case "S" | "swap":
-                        mapped_value = "0657fd6d-a4ab-43c4-84e5-0933c84b4f4f"
-                    case "H" | "home":
-                        mapped_value = "933ac7e1-2eb4-4f13-b844-0e14e2aef915"
-                    case "U" | "esp" | "uefi":
-                        mapped_value = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
-                    case "R" | "raid":
-                        mapped_value = "a19d880f-05fc-4d3b-a006-743f0f84911e"
-                    case "V" | "lvm":
-                        mapped_value = "e6d6d379-f507-44c2-a23c-238f2a3df928"
-                    case "F" | "fat32":
-                        mapped_value = "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7"
-                    case _:
-                        pass
-            case _:
-                pass
+        if translate_fn:
+            value = translate_fn(key, value)
 
-        attributes[key.strip()] = mapped_value
-    return attributes
+    return (key, value)
 
 
-# Read all fstabs extracting mount options using UUID or label
+# Convert a libconfuse struct to nested dictionary with optional translate
+# function and exclude filter for key value pairs
+def confuse2dict(config_path, exclude_keys=None, tfn=None):
+    with open(config_path, "r") as f:
+        lines = f.readlines()
+
+    root_structure = {}
+    section_stack = [root_structure]
+
+    # Match entry of section - type and optional subtype
+    section_delimiter = r"([a-zA-Z0-9\-]+)(?:\s+([^\s]+))?\s*\{"
+
+    for line in lines:
+        line = line.strip()
+
+        # remove any comments
+        line = re.sub(r"\s*#.*", "", line).strip()
+        if line == "" or not line:
+            continue
+
+        section = re.search(section_delimiter, line)
+        if section:
+            section_type = section.group(1)
+            section_subtype = section.group(2)
+
+            new_section = {}
+
+            if section_subtype:
+                if section_type not in section_stack[-1]:
+                    section_stack[-1][section_type] = {} # new
+                section_stack[-1][section_type][section_subtype] = new_section
+                section_stack.append(new_section)
+            else:
+                section_stack[-1][section_type] = new_section
+                section_stack.append(new_section)
+
+            if '}' in line: # end of section on same line
+                section_stack.pop()
+
+            continue
+
+        if "}" in line: # end of section
+            if len(section_stack) > 1:
+                section_stack.pop()
+            else:
+                raise ValueError("Unexpected closing brace")
+            continue
+
+        key, value = read_kv(line, exclude_keys, tfn)
+        if key and value:
+            if section_stack:
+                section_stack[-1][key] = value
+
+    if len(section_stack) != 1:
+        raise ValueError("Parse error. Mismatched brace?")
+
+    return root_structure
+
+
+# Recursive find all sections by type
+def find_sections(stype, data, sections=None):
+    if sections is None:
+        sections = {}
+
+    for k, v in data.items():
+        if isinstance(v, dict):
+            if k == stype:
+                for name, data in v.items():
+                    sections[name] = data
+            else:
+                find_sections(stype, v, sections)
+    return sections
+
+
+def get_fs_label(section):
+    label = section.get("label")
+    if label:
+        return label
+    return None
+
+
+def process_extfs(section):
+    args = section.get("extraargs", "")
+    values = {
+        "fs_uuid": get_extfs_uuid(args),
+        "fs_label": get_fs_label(section)
+    }
+    return {k: v for k, v in values.items() if v is not None}
+
+
+def process_vfat(section):
+    args = section.get("extraargs", "")
+    values = {
+        "fs_uuid": get_vfat_uuid(args),
+        "fs_label": get_fs_label(section)
+    }
+    return {k: v for k, v in values.items() if v is not None}
+
+
+IMAGE_PROCESSORS = {
+    "vfat": process_vfat,
+    "ext2": process_extfs,
+    "ext3": process_extfs,
+    "ext4": process_extfs
+}
+
+
+def parse_genimage_config(config_path):
+    data = confuse2dict(config_path, {"exec-pre", "exec-post"}, map_genimage)
+
+    images = find_sections("image", data)
+    partitions = find_sections("partition", data)
+
+    disk_attr = {}
+
+    # Anchor to hdimage parent for top level attributes
+    for iname, idata in images.items():
+        if "hdimage" in idata:
+            hdimage = idata.get("hdimage")
+            disk_attr["partition-table-type"] = hdimage.get("partition-table-type")
+            disk_attr["image-size"] = idata.get("size") if idata.get("size") else "0"
+
+    # https://github.com/pengutronix/genimage?tab=readme-ov-file#the-image-configuration-options
+    gtypes = ["android-sparse", "btrfs", "cpio", "cramfs", "ext2", "ext3",
+              "ext4", "f2fs", "file", "FIT", "fip", "flash", "iso", "jffs2",
+              "qemu", "rauc", "squashfs," "tar", "ubi", "vfat"]
+
+    # Associate partitions with their images
+    for pname, pattr in partitions.items():
+        if "image" in pattr:
+            iname = pattr["image"]
+            if iname in images:
+                # Found. Merge
+                partitions[pname] = {**images[iname], **pattr}
+
+                # Tag image type
+                for t in gtypes:
+                    s = find_sections(t, partitions[pname])
+                    if s:
+                        partitions[pname]["type"] = t
+                        # Invoke the processor for this type
+                        if t in IMAGE_PROCESSORS:
+                            attr = IMAGE_PROCESSORS[t](s)
+                            if attr:
+                                partitions[pname].update(attr)
+
+    return (disk_attr, partitions)
+
+
+# Read all fstabs and store in a dict using UUID or label if we can,
+# or a unique key if we can't.
 def parse_fstab(fstab_paths):
     fstab_data = {}
+    fcount = 1
     for fstab_path in fstab_paths:
         try:
             with open(fstab_path, "r") as f:
+                lcount = 1
                 for line in f:
                     line = line.strip()
                     if line.startswith("#") or line == "":
@@ -193,36 +279,46 @@ def parse_fstab(fstab_paths):
                     elif device.startswith(("/dev/disk/by-label/", "/dev/disk/by-uuid/")):
                         deviceid = device.rsplit("/", 1)[-1]
                     else:
-                        continue # skip unsupported
+                        deviceid = f"fstab{fcount}_{lcount}"
 
                     # This will overwrite previous settings if the device exists in multiple fstabs
+                    # under the same uuid/label.
                     fstab_data[deviceid] = {"fs_spec": device,
                                             "fs_file": mountpoint,
                                             "fs_vfstype": fstype,
                                             "fs_mntops": mount_options,
                                             "fs_freq": freq,
                                             "fs_passno": passn}
+                    lcount += 1
 
         except FileNotFoundError:
             sys.exit('invalid fstab: %s' % fstab_path)
 
+        fcount += 1
+
     return fstab_data
 
 
-# Use a label or uuid to associate a genimage partition with an fstab device entry to
-# establish mount point and mount options. If a match is found, the fstab section of
-# the partition is populated.
+# Try to match a genimage partition with an fstab device entry to establish mount options.
+# Try static uuid and label first, falling back to genimage mountpoint.
+# This lookup can only give guaranteed matching results if there is no duplication of
+# uuid, label or mountpoint in each fstab file provided.
+# If a match is found, the fstab section of the partition is populated.
 def merge_configs(genimage_partitions, fstab_data):
-    for partition in genimage_partitions:
-        label = partition.get("label")
-        uuid = partition.get("uuid")
+    for pname, pdata in genimage_partitions.items():
+        label = pdata.get("fs_label")
+        uuid = pdata.get("fs_uuid")
 
-        if label and label in fstab_data:
-            partition["fstab"] = fstab_data[label]
-        elif uuid and uuid in fstab_data:
-            partition["fstab"] = fstab_data[uuid]
+        if uuid and uuid in fstab_data:
+            pdata["fstab"] = fstab_data[uuid]
+        elif label and label in fstab_data:
+            pdata["fstab"] = fstab_data[label]
         else:
-            pass
+            pmnt = pdata.get("mountpoint")
+            if pmnt:
+                for name, contents in fstab_data.items():
+                    if pmnt == contents.get("fs_file"):
+                        pdata["fstab"] = fstab_data[name]
 
     return genimage_partitions
 
@@ -262,7 +358,7 @@ if __name__ == '__main__':
     genimage_file = args.genimage;
 
     # Base info
-    partition_table_type, genimage_partitions = parse_genimage_config(genimage_file)
+    attributes, genimage_partitions = parse_genimage_config(genimage_file)
 
     # fstab is optional
     if args.fstab:
@@ -273,7 +369,8 @@ if __name__ == '__main__':
         partition_json = genimage_partitions
 
     top_template["meta"] = get_image_meta()
-    top_template["layout"]["partition-table-type"] = partition_table_type
+    top_template["attributes"]["image-size"] = attributes.get("image-size")
+    top_template["layout"]["partition-table-type"] = attributes.get("partition-table-type")
     top_template["layout"]["partitions"] = partition_json
 
     print(json.dumps(top_template, indent=4))
