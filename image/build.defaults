@@ -12,5 +12,12 @@ compression=none
 # Optional file in an image layout directory providing additional settings
 options=defaults
 
+# Optional file in an image layout directory under sub-directory profile/
+# This is treated as additional profile and it's specified layers will be
+# aggregated into the configuration. A layout may require a profile in
+# order to support certain functionality (eg particular packages needed).
+# A layout may define this in its options file.
+profile=
+
 # The base name for all generated images
 name="${IGconf_device_class}-${IGconf_device_variant}-${IGconf_image_version}"
