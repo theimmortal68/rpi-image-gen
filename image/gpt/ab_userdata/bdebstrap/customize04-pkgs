@@ -1,5 +1,0 @@
-#!/bin/sh
-
-set -u
-
-chroot $1 apt install -y sed coreutils initramfs-tools
