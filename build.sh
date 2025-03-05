@@ -251,36 +251,68 @@ ENV_POST_BUILD+=(PATH="${IGTOP}/bin:${IGconf_sys_workdir}/host/bin:${PATH}")
 # Load layer default settings and append layer to list
 layer_push()
 {
-   if [[ -n $EXT_NSMETA && -s "${EXT_NSMETA}/$1.yaml" ]] ; then
-      [[ -f "${EXT_NSMETA}/$1.defaults" ]] && aggregate_options "meta" "${EXT_NSMETA}/$1.defaults"
-      ARGS_LAYERS+=('--config' "${EXT_NSMETA}/$1.yaml")
+   msg "Load layer [$1] $2"
+   case "$1" in
+      image)
+         if [[ -s "${IGIMAGE}/meta/$2.yaml" ]] ; then
+            [[ -f "${IGIMAGE}/meta/$2.defaults" ]] && \
+               aggregate_options "meta" "${IGIMAGE}/meta/$2.defaults"
+            ARGS_LAYERS+=('--config' "${IGIMAGE}/meta/$2.yaml")
+            return
+         fi
+         ;& # image layer can pull in core layers, but not vice versa
 
-   elif [[ -n $EXT_META && -s "${EXT_META}/$1.yaml" ]] ; then
-      [[ -f "${EXT_META}/$1.defaults" ]] && aggregate_options "meta" "${EXT_META}/$1.defaults"
-      ARGS_LAYERS+=('--config' "${EXT_META}/$1.yaml")
+      main|auto)
+         if [[ -n $EXT_NSMETA && -s "${EXT_NSMETA}/$2.yaml" ]] ; then
+            [[ -f "${EXT_NSMETA}/$2.defaults" ]] && \
+               aggregate_options "meta" "${EXT_NSMETA}/$2.defaults"
+            ARGS_LAYERS+=('--config' "${EXT_NSMETA}/$2.yaml")
 
-   elif [[ -s "${META}/$1.yaml" ]] ; then
-      [[ -f "${META}/$1.defaults" ]] && aggregate_options "meta" "${META}/$1.defaults"
-      ARGS_LAYERS+=('--config' "${META}/$1.yaml")
+         elif [[ -n $EXT_META && -s "${EXT_META}/$2.yaml" ]] ; then
+            [[ -f "${EXT_META}/$2.defaults" ]] && \
+               aggregate_options "meta" "${EXT_META}/$2.defaults"
+            ARGS_LAYERS+=('--config' "${EXT_META}/$2.yaml")
 
-   else
-      die "Invalid meta specifier: $1 (not found)"
-   fi
+         elif [[ -s "${META}/$2.yaml" ]] ; then
+            [[ -f "${META}/$2.defaults" ]] && \
+               aggregate_options "meta" "${META}/$2.defaults"
+            ARGS_LAYERS+=('--config' "${META}/$2.yaml")
+         else
+            die "Invalid meta layer specifier: $2 (not found)"
+         fi
+         ;;
+      *)
+         die "Invalid layer scope" ;;
+   esac
 }
 
 
-# Assemble meta layers from profile
 ARGS_LAYERS=()
-while read -r line; do
-   [[ "$line" =~ ^#.*$ ]] && continue
-   [[ "$line" =~ ^$ ]] && continue
-   layer_push "$line"
-done < "${IGPROFILE}"
+load_profile() {
+   [[ $# -eq 2 ]] || die "Load profile bad nargs"
+   msg "Load profile $2"
+   [[ -f $2 ]] || die "Invalid profile: $2"
+   while read -r line; do
+      [[ "$line" =~ ^#.*$ ]] && continue
+      [[ "$line" =~ ^$ ]] && continue
+      layer_push "$1" "$line"
+   done < "$2"
+}
+
+
+# Assemble meta layers from main profile
+load_profile main "$IGPROFILE"
+
+
+# Add layers from image profile
+if igconf_isset image_profile ; then
+   load_profile image "${IGIMAGE}/profile/${IGconf_image_profile}"
+fi
 
 
 # Auto-selected layers
 if igconf_isy device_ssh_user1 ; then
-   layer_push net-misc/openssh-server
+   layer_push auto net-misc/openssh-server
 fi
 
 
