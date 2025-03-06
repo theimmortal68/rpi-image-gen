@@ -16,6 +16,12 @@ for dir in ${IGIMAGE}/device/initramfs-tools \
    rsync --archive --ignore-existing "${dir}/" $1/etc/initramfs-tools
 done
 
+# Hint if the image layout has declared a rootfs type. This helps ensure
+# the appropriate fsck binaries are installed.
+if igconf isset image_rootfs_type ; then
+   sed -i "s|FSTYPE=\([^ ]*\)|FSTYPE=${IGconf_image_rootfs_type}|" $1/etc/initramfs-tools/initramfs.conf
+fi
+
 # Always make sure all initramfs are updated
 cp $1/etc/initramfs-tools/update-initramfs.conf $1/etc/initramfs-tools/update-initramfs.conf.bak
 sed -i 's/^update_initramfs=.*/update_initramfs=all/' $1/etc/initramfs-tools/update-initramfs.conf

@@ -8,3 +8,6 @@ install -m 0644 -D ../device/slot.rules $1/etc/udev/rules.d/90-rpi-slot.rules
 # Install slot helper
 mkslot-helper < ../device/slot.pmap > $1/usr/bin/rpi-slot || exit 1
 chmod +x $1/usr/bin/rpi-slot
+
+# Hint to initramfs-tools we have an ext4 rootfs
+sed -i "s|FSTYPE=\([^ ]*\)|FSTYPE=ext4|" $1/etc/initramfs-tools/initramfs.conf
