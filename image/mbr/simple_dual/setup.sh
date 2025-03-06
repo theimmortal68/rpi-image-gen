@@ -16,7 +16,7 @@ EOF
             ;;
          btrfs)
             cat << EOF > $IMAGEMOUNTPATH/etc/fstab
-UUID=${ROOTUUID} /               btrfs defaults 0 1
+UUID=${ROOTUUID} /               btrfs defaults 0 0
 EOF
             ;;
          *)
