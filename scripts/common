@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Functions available to the rpi-image-gen core and wider system
 
 msg() {

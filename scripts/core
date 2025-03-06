@@ -1,3 +1,7 @@
+#!/bin/bash
+
+set -u
+
 # Functions intended for use by the rpi-image-gen core build system only.
 # There should be no need for this script to be included by anything else.
 
@@ -31,7 +35,7 @@ assignv() {
 merge_config_section() {
    local section=$1
    local cfg=$2
-   local attrs=$(crudini --get --format=sh $cfg $section 2>/dev/null)
+   local attrs=$(crudini --get --format=sh "$cfg" "$section" 2>/dev/null)
    if [ $? -eq 0 ] ; then
       while IFS="=" read -r key value ; do
          [[ "$key" =~ ^#.*$ ]] && continue
@@ -53,8 +57,8 @@ aggregate_config() {
     [[ "$w1" =~ ^$ ]] && continue
     case $w1 in
        include)
-         [[ $(basename $cfg) ==  $(basename $w2) ]] && die "Recursive include: $cfg"
-         aggregate_config "$(dirname $cfg)/$w2"
+         [[ $(basename "$cfg") ==  $(basename "$w2") ]] && die "Recursive include: $cfg"
+         aggregate_config "$(dirname "$cfg")/$w2"
          ;;
        *)
          ;;
@@ -69,8 +73,8 @@ aggregate_config() {
 }
 
 
-# shell variable list parser reading key value pairs into the env. key names
-# will be prefixed and converted to lower case, e.g.
+# shell variable list parser reading key value pairs into the env with optional
+# section prefix. key names will be prefixed and converted to lower case, e.g.
 #
 # foo=zzz
 # BAR=yyy
@@ -80,18 +84,20 @@ aggregate_config() {
 # IGconf_bar=yyy
 #
 apply_options() {
-   if [[ $# -eq 1 && -f $1 ]] ; then
-      local attrs=$(cat $1)
+   if [[ $# -eq 2 && -f $2 ]] ; then
+      local prefix=IGconf_"${1,,}"
+      local attrs=$(cat "$2")
    else
-      local attrs=$(cat)
+      local prefix=IGconf
+      local attrs=$(cat "$1")
    fi
    while IFS="=" read -r key value ; do
       [[ "$key" =~ ^#.*$ ]] && continue
       [[ "$key" =~ ^$ ]] && continue
       if [[ "$value" =~ ^$ ]] ; then
-         eval unset IGconf_"${key,,}"
+         eval unset "${prefix}_${key,,}"
       else
-         eval IGconf_"${key,,}"="$value"
+         eval "${prefix}_${key,,}"="$value"
       fi
    done < <(printf '%s\n' "$attrs")
 }
@@ -102,7 +108,7 @@ apply_options() {
 # empty string.
 aggregate_options() {
    if [[ $# -eq 2 && -f $2 ]] ; then
-      local attrs=$(cat $2)
+      local attrs=$(cat "$2")
    else
       local attrs=$(cat)
    fi
@@ -110,7 +116,7 @@ aggregate_options() {
    while IFS="=" read -r key value ; do
       [[ "$key" =~ ^#.*$ ]] && continue
       [[ "$key" =~ ^$ ]] && continue
-      local var=IGconf_"${section}"_"${key,,}"
+      local var="IGconf_${section}_${key,,}"
       assignv "$var" "$value"
    done < <(printf '%s\n' "$attrs")
 }
