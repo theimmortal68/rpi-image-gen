@@ -126,7 +126,7 @@ fi
 
 msg "Reading $INCONFIG from $IGTOP_CONFIG with options [$INOPTIONS]"
 
-# Load options first to perform explicit set/unset
+# Load options(1) to perform explicit set/unset
 [[ -s "$INOPTIONS" ]] && apply_options "$INOPTIONS"
 
 
@@ -134,15 +134,7 @@ msg "Reading $INCONFIG from $IGTOP_CONFIG with options [$INOPTIONS]"
 aggregate_config "${IGTOP_CONFIG}/${INCONFIG}.cfg"
 
 
-# Merge defaults
-aggregate_options "device" ${IGTOP_DEVICE}/build.defaults
-aggregate_options "image" ${IGTOP_IMAGE}/build.defaults
-aggregate_options "sys" ${IGTOP}/sys-build.defaults
-aggregate_options "sbom" ${IGTOP_SBOM}/defaults
-aggregate_options "meta" ${META}/defaults
-
-
-# Mandatory
+# Mandatory for subsequent parsing
 [[ -z ${IGconf_image_layout+x} ]] && die "No image layout provided"
 [[ -z ${IGconf_device_class+x} ]] && die "No device class provided"
 [[ -z ${IGconf_device_profile+x} ]] && die "No device profile provided"
@@ -166,14 +158,25 @@ for i in IGDEVICE IGIMAGE IGPROFILE ; do
 done
 
 
-# Now merge defaults for device and image
-IGDEVICE_OPT=$(realpath -e "${IGDEVICE}/$IGconf_device_options" 2>/dev/null)
-IGIMAGE_OPT=$(realpath -e "${IGIMAGE}/$IGconf_image_options" 2>/dev/null)
-[[ -s "$IGDEVICE_OPT" ]] && aggregate_options "device" "$IGDEVICE_OPT"
-[[ -s "$IGIMAGE_OPT" ]] && aggregate_options "image" "$IGIMAGE_OPT"
+# Merge config options for selected device and image
+[[ -s ${IGDEVICE}/config.options ]] && aggregate_options "device" ${IGDEVICE}/config.options
+[[ -s ${IGIMAGE}/config.options ]] && aggregate_options "image" ${IGIMAGE}/config.options
 
 
-# Lastly, reapply options to perform final overrides as necessary
+# Merge defaults for selected device and image
+[[ -s ${IGDEVICE}/build.defaults ]] && aggregate_options "device" ${IGDEVICE}/build.defaults
+[[ -s ${IGIMAGE}/build.defaults ]] && aggregate_options "image" ${IGIMAGE}/build.defaults
+
+
+# Merge remaining defaults
+aggregate_options "device" ${IGTOP_DEVICE}/build.defaults
+aggregate_options "image" ${IGTOP_IMAGE}/build.defaults
+aggregate_options "sys" ${IGTOP}/sys-build.defaults
+aggregate_options "sbom" ${IGTOP_SBOM}/defaults
+aggregate_options "meta" ${META}/defaults
+
+
+# Load options(2) for final overrides
 [[ -s "$INOPTIONS" ]] && apply_options "$INOPTIONS"
 
 

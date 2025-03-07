@@ -9,9 +9,6 @@ variant=none
 # Default hostname
 hostname=raspberrypi
 
-# Optional filename in a device specific directory providing additional settings
-options=defaults
-
 # A user account with this name will be created on the device
 user1=pi
 

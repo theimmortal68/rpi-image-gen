@@ -185,9 +185,9 @@ Before commencing creation of the rootfs, the configuration of the system is ass
 
 * User option file settings (scope: explicit set and unset [see Note1 below])
 * Config file settings (scope: aggregate, set and unset)
-* System wide default settings (scope: aggregate, set and unset)
+* User option file settings (scope: aggregate, set and unset)
 * Selected Device and Image settings (scope: aggregate, set and unset)
-* User option file settings (scope: explicit set and unset)
+* System wide default settings (scope: aggregate, set and unset)
 
 The config file uses .ini file syntax (https://en.wikipedia.org/wiki/INI_file) to set ```key=value``` pairs inside a section. +
 The user options file, and files containing default settings, are shell fragments containing declarative ```key=value``` pairs. +
