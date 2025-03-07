@@ -106,13 +106,20 @@ RPI_TEMPLATES="${IGTOP}/templates/rpi"
 
 
 # Establish the top level directory hierarchy by detecting the config file
-if [[ -d "${EXT_DIR}/config" && -s "${EXT_DIR}/config/${INCONFIG}.cfg" ]] ; then
+INCONFIG="${INCONFIG%.cfg}.cfg"
+if [[ -d ${EXT_DIR} ]] && \
+   [[ -f $(realpath -e ${EXT_DIR}/config/${INCONFIG} 2>/dev/null) ]] ; then
    IGTOP_CONFIG="${EXT_DIR}/config"
-elif [[ -s "${IGTOP}/config/${INCONFIG}.cfg" ]] ; then
-   IGTOP_CONFIG="${IGTOP}/config"
 else
-   die "config "$INCONFIG" not found or invalid"
+   __IC=$(basename "$INCONFIG")
+   if realpath -e "${IGTOP_CONFIG}/${__IC}" > /dev/null 2>&1  ; then
+      INCONFIG="$__IC"
+   else
+      die "Can't resolve config file path for '${INCONFIG}'. Need -D?"
+   fi
 fi
+CFG=$(realpath -e "${IGTOP_CONFIG}/${INCONFIG}" 2>/dev/null) || \
+   die "Bad config spec: $IGTOP_CONFIG : $INCONFIG"
 
 
 [[ -d $EXT_META ]] && msg "External meta at $EXT_META"
@@ -124,14 +131,14 @@ fi
 [[ -d $EXT_NSDIR ]] && IGconf_ext_nsdir="$EXT_NSDIR"
 
 
-msg "Reading $INCONFIG from $IGTOP_CONFIG with options [$INOPTIONS]"
+msg "Reading $CFG with options [$INOPTIONS]"
 
 # Load options(1) to perform explicit set/unset
 [[ -s "$INOPTIONS" ]] && apply_options "$INOPTIONS"
 
 
 # Merge config
-aggregate_config "${IGTOP_CONFIG}/${INCONFIG}.cfg"
+aggregate_config "$CFG"
 
 
 # Mandatory for subsequent parsing
