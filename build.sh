@@ -359,28 +359,31 @@ fi
    --name "$IGconf_image_name" \
    --hostname "$IGconf_device_hostname" \
    --output "$IGconf_sys_outputdir" \
-   --target "${IGconf_sys_workdir}/rootfs" \
-   --setup-hook 'bin/runner setup "${IGconf_sys_workdir}/rootfs"' \
-   --essential-hook 'bin/runner essential "${IGconf_sys_workdir}/rootfs"' \
-   --customize-hook 'bin/runner customize "${IGconf_sys_workdir}/rootfs"' \
-   --cleanup-hook 'bin/runner cleanup "${IGconf_sys_workdir}/rootfs"'
+   --target "$IGconf_sys_target"  \
+   --setup-hook 'bin/runner setup "$@"' \
+   --essential-hook 'bin/runner essential "$@"' \
+   --customize-hook 'bin/runner customize "$@"' \
+   --cleanup-hook 'bin/runner cleanup "$@"'
+
+
+[[ -f "$IGconf_sys_target" ]] && { msg "Exiting as non-directory target complete" ; exit 0 ; }
 
 
 # post-build: apply rootfs overlays - image layout then device
 if [ -d ${IGIMAGE}/device/rootfs-overlay ] ; then
-   run rsync -a ${IGIMAGE}/device/rootfs-overlay/ ${IGconf_sys_workdir}/rootfs
+   run rsync -a ${IGIMAGE}/device/rootfs-overlay/ ${IGconf_sys_target}
 fi
 if [ -d ${IGDEVICE}/device/rootfs-overlay ] ; then
-   run rsync -a ${IGDEVICE}/device/rootfs-overlay/ ${IGconf_sys_workdir}/rootfs
+   run rsync -a ${IGDEVICE}/device/rootfs-overlay/ ${IGconf_sys_target}
 fi
 
 
 # post-build: hooks - image layout then device
 if [ -x ${IGIMAGE}/post-build.sh ] ; then
-   runh ${IGIMAGE}/post-build.sh ${IGconf_sys_workdir}/rootfs
+   runh ${IGIMAGE}/post-build.sh ${IGconf_sys_target}
 fi
 if [ -x ${IGDEVICE}/post-build.sh ] ; then
-   runh ${IGDEVICE}/post-build.sh ${IGconf_sys_workdir}/rootfs
+   runh ${IGDEVICE}/post-build.sh ${IGconf_sys_target}
 fi
 
 
@@ -389,9 +392,9 @@ fi
 
 # pre-image: hooks - device has priority over image layout
 if [ -x ${IGDEVICE}/pre-image.sh ] ; then
-   runh ${IGDEVICE}/pre-image.sh ${IGconf_sys_workdir}/rootfs ${IGconf_sys_outputdir}
+   runh ${IGDEVICE}/pre-image.sh ${IGconf_sys_target} ${IGconf_sys_outputdir}
 elif [ -x ${IGIMAGE}/pre-image.sh ] ; then
-   runh ${IGIMAGE}/pre-image.sh ${IGconf_sys_workdir}/rootfs ${IGconf_sys_outputdir}
+   runh ${IGIMAGE}/pre-image.sh ${IGconf_sys_target} ${IGconf_sys_outputdir}
 else
    die "no pre-image hook"
 fi
@@ -399,7 +402,7 @@ fi
 
 # SBOM
 if [ -x ${IGTOP_SBOM}/gen.sh ] ; then
-   runh ${IGTOP_SBOM}/gen.sh ${IGconf_sys_workdir}/rootfs ${IGconf_sys_outputdir}
+   runh ${IGTOP_SBOM}/gen.sh ${IGconf_sys_target} ${IGconf_sys_outputdir}
 fi
 
 
@@ -411,7 +414,7 @@ mkdir -p "$IGconf_sys_deploydir"
 # Generate image(s)
 for f in "${IGconf_sys_outputdir}"/genimage*.cfg; do
    run podman unshare env "${ENV_POST_BUILD[@]}" genimage \
-      --rootpath ${IGconf_sys_workdir}/rootfs \
+      --rootpath ${IGconf_sys_target} \
       --tmppath $GTMP \
       --inputpath ${IGconf_sys_outputdir}   \
       --outputpath ${IGconf_sys_outputdir} \
