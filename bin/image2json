@@ -8,11 +8,12 @@ import copy
 import sys
 
 
-VERSION = "1.1.2"
+VERSION = "1.1.3"
 
 
 IMAGE_KEYS = {"IGconf_device_class",
               "IGconf_device_variant",
+              "IGconf_device_storage_type",
               "IGconf_image_name",
               "IGconf_image_version",
               "IGconf_sys_outputdir"}
