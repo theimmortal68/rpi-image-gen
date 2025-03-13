@@ -342,6 +342,10 @@ runh()
 }
 
 
+# pre-build: hooks - common
+runh ${IGTOP_DEVICE}/pre-build.sh
+
+
 # pre-build: hooks - image layout then device
 if [ -x ${IGIMAGE}/pre-build.sh ] ; then
    runh ${IGIMAGE}/pre-build.sh

@@ -36,13 +36,26 @@ disable_overscan=1
 # Run as fast as firmware / board allows
 arm_boost=1
 
+[pi02]
+# If don't care about Bluetooth use the line below to get the pl011 instead of 8250 UART
+# and use console=ttyAMA0,115200
+# dtoverlay=disable-bt
+enable_uart=1
+
+[pi4]
+enable_uart=1
+
 [cm4]
 # Enable host mode on the 2711 built-in XHCI USB controller.
 # This line should be removed if the legacy DWC2 controller is required
 # (e.g. for USB device mode) or if USB support is not required.
 otg_mode=1
 
+[pi5]
+BOOT_UART=1
+
 [cm5]
 dtoverlay=dwc2,dr_mode=host
 
 [all]
+uart_2ndstage=1
