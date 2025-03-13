@@ -30,3 +30,17 @@ outputdir="${IGconf_sys_workdir}/artefacts"
 
 # Location where final images and assets will be installed to.
 deploydir="${IGconf_sys_workdir}/deploy"
+
+# The type of target created by bdebstrap to hold the device filesystem.
+# This argument is passed straight to bdebstrap via --target and can be the
+# path to a directory, the path to a tarball filename, etc. See bdebstrap(1)
+# for further details.
+# If not a directory, rpi-image-gen will terminate immediately after bdebstrap
+# execution completes for the sole reason that subsequent stages (eg post-build
+# hooks and genimage) do not support operating on anything except  a directory.
+# Custom bdebstrap hooks are unaffected by different target types because they
+# execute in bdebstrap context and always operate on the chroot regardless if
+# the target is a file or a directory.
+# Note that it's possible to specify a directory here and use a post-build hook
+# to create a file (eg tarball) as an additional artefact.
+target="${IGconf_sys_workdir}/rootfs"
