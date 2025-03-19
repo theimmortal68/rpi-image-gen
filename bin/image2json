@@ -8,7 +8,7 @@ import copy
 import sys
 
 
-VERSION = "1.1.3"
+VERSION = "1.1.4"
 
 
 IMAGE_KEYS = {"IGconf_device_class",
@@ -196,10 +196,11 @@ def process_vfat(section):
 
 
 IMAGE_PROCESSORS = {
-    "vfat": process_vfat,
-    "ext2": process_extfs,
-    "ext3": process_extfs,
-    "ext4": process_extfs
+    "vfat":  process_vfat,
+    "ext2":  process_extfs,
+    "ext3":  process_extfs,
+    "ext4":  process_extfs,
+    "btrfs": process_extfs
 }
 
 
