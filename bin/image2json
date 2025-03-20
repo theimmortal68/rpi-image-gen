@@ -8,7 +8,7 @@ import copy
 import sys
 
 
-VERSION = "1.2.4"
+VERSION = "1.3.4"
 
 
 IMAGE_KEYS = {"IGconf_device_class",
@@ -20,7 +20,7 @@ IMAGE_KEYS = {"IGconf_device_class",
 
 
 top_template = {
-    "version": VERSION,
+    "IGversion": VERSION,
     "meta": [],
     "attributes": {
         "image-size": "0",
@@ -180,6 +180,29 @@ def find_images(itype, data):
     return timages
 
 
+# Returns the size of a file. If file is not an absolute path, use
+# the env var as the directory of where to look.
+def get_artefact_size(file, dir_evar):
+    if not os.path.isabs(file):
+        dir = os.getenv(dir_evar)
+        if not dir:
+            raise ValueError(f"Not an env var: {dir_evar}")
+
+        if not os.path.isdir(dir):
+            raise FileNotFoundError(f"Dir not found: {dir}")
+            return None
+
+        fpath = os.path.join(dir, file)
+    else:
+        fpath = file
+
+    if not os.path.isfile(fpath):
+        raise FileNotFoundError(f"File not found: {fpath}")
+        return None
+
+    return os.stat(fpath).st_size
+
+
 def get_fs_label(section):
     label = section.get("label")
     if label:
@@ -229,6 +252,9 @@ def parse_genimage_config(config_path):
             hdimage = idata.get("hdimage")
             disk_attr["partition-table-type"] = hdimage.get("partition-table-type")
             disk_attr["image-size"] = idata.get("size") if idata.get("size") else "0"
+            sz = get_artefact_size(iname, "IGconf_sys_outputdir")
+            if sz:
+                disk_attr["image-size"] = str(sz)
 
     # https://github.com/pengutronix/genimage?tab=readme-ov-file#the-image-configuration-options
     gtypes = ["android-sparse", "btrfs", "cpio", "cramfs", "ext2", "ext3",
@@ -253,6 +279,13 @@ def parse_genimage_config(config_path):
                             attr = IMAGE_PROCESSORS[t](s)
                             if attr:
                                 partitions[pname].update(attr)
+
+                # Establish the actual size of the partition image rather than relying on
+                # the size described by the genimage config (which may be expressed in
+                # percent). The actual size is required for provisioning purposes.
+                sz = get_artefact_size(iname, "IGconf_sys_outputdir")
+                if sz:
+                    partitions[pname]["size"] = str(sz)
 
                 # If this image has a sparse derivative, tag it
                 for sname, sattr in simgs.items():
