@@ -8,7 +8,7 @@ import copy
 import sys
 
 
-VERSION = "1.1.4"
+VERSION = "1.2.4"
 
 
 IMAGE_KEYS = {"IGconf_device_class",
@@ -170,6 +170,16 @@ def find_sections(stype, data, sections=None):
     return sections
 
 
+# Find all images by type
+def find_images(itype, data):
+    timages = {}
+    images = find_sections("image", data)
+    for iname, iattr in images.items():
+        if itype in iattr:
+            timages[iname] = iattr
+    return timages
+
+
 def get_fs_label(section):
     label = section.get("label")
     if label:
@@ -209,6 +219,7 @@ def parse_genimage_config(config_path):
 
     images = find_sections("image", data)
     partitions = find_sections("partition", data)
+    simgs = find_images("android-sparse", data)
 
     disk_attr = {}
 
@@ -242,6 +253,13 @@ def parse_genimage_config(config_path):
                             attr = IMAGE_PROCESSORS[t](s)
                             if attr:
                                 partitions[pname].update(attr)
+
+                # If this image has a sparse derivative, tag it
+                for sname, sattr in simgs.items():
+                    simg = sattr.get("android-sparse")
+                    if iname == simg.get("image"):
+                        partitions[pname]["simage"] = sname
+
 
     return (disk_attr, partitions)
 
