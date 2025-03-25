@@ -23,6 +23,10 @@ if [ -f ${IGconf_sys_outputdir}/genimage.cfg ] ; then
          opts+=('-f' $f)
       fi
    done
+
+   if [ -f ${IGconf_sys_outputdir}/provisionmap.json ] ; then
+      opts+=('-m' ${IGconf_sys_outputdir}/provisionmap.json)
+   fi
    image2json -g ${IGconf_sys_outputdir}/genimage.cfg "${opts[@]}" > ${IGconf_sys_outputdir}/image.json
 fi
 

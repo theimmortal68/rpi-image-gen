@@ -20,3 +20,4 @@ btrfs-progs
 dctrl-tools
 uuidgen:uuid-runtime
 fdisk
+jq

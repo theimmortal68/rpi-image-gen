@@ -1,0 +1,64 @@
+{
+   "PMAPversion": "1.0.0",
+   "system_type": "slotted",
+   "slots": {
+      "A": {
+         "partitions": [
+            {
+               "name": "bootA",
+               "id": 2,
+               "role": "boot"
+            }
+         ],
+         "encrypted": {
+            "luks": {
+               "version": 2,
+               "key_size": 512,
+               "cipher": "aes-xts-plain64",
+               "hash": "sha256"
+            },
+            "partitions": [
+               {
+                  "name": "systemA",
+                  "id": "cryptrootA",
+                  "role": "system"
+               }
+            ]
+         }
+      },
+      "B": {
+         "partitions": [
+            {
+               "name": "bootB",
+               "id": 3,
+               "role": "boot"
+            }
+         ],
+         "encrypted": {
+            "luks": {
+               "version": 2,
+               "key_size": 512,
+               "cipher": "aes-xts-plain64",
+               "hash": "sha256"
+            },
+            "partitions": [
+               {
+                  "name": "systemB",
+                  "id": "cryptrootB",
+                  "role": "system"
+               }
+            ]
+         }
+      }
+   },
+   "partitions": [
+      {
+         "name": "config",
+         "id": "1"
+      },
+      {
+         "name": "data",
+         "id": "6"
+      }
+   ]
+}

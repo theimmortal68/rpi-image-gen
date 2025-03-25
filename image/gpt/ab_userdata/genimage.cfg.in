@@ -54,7 +54,6 @@ image <IMAGE_NAME>.<IMAGE_SUFFIX> {
       bootable = true
    }
 
-   # <slot.pmap>
    partition bootA {
       in-partition-table = true
       image = bootA.vfat
@@ -80,7 +79,6 @@ image <IMAGE_NAME>.<IMAGE_SUFFIX> {
       image = systemB.ext4
       partition-type-uuid = L
    }
-   # </slot.pmap>
 
    partition data {
       in-partition-table = true

@@ -28,7 +28,8 @@ top_template = {
     },
     "layout": {
         "partitiontable": [],
-        "partitionimages": []
+        "partitionimages": [],
+        "provisionmap": []
     }
 }
 
@@ -438,6 +439,11 @@ if __name__ == '__main__':
                         nargs="*",
                         required=False)
 
+    parser.add_argument("-m", "--provisionmap",
+                        help="Path to the JSON provisioning map",
+                        type=argparse.FileType('r'),
+                        required=False)
+
     args = parser.parse_args()
     genimage_file = args.genimage;
 
@@ -457,5 +463,8 @@ if __name__ == '__main__':
     top_template["attributes"]["image-size"] = attributes.get("image-size")
     top_template["layout"]["partitiontable"] = ptable["partitiontable"]
     top_template["layout"]["partitionimages"] = partition_json
+    if args.provisionmap:
+        with args.provisionmap as f:
+            top_template["layout"]["provisionmap"] = json.load(f)
 
     print(json.dumps(top_template, indent=4))

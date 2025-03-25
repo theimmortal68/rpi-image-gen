@@ -6,11 +6,15 @@ die (){
 }
 
 
-# defaults
-: "${BOOTA:=99}"
-: "${BOOTB:=99}"
-: "${SYSTEMA:=99}"
-: "${SYSTEMB:=99}"
+: "${BOOTA:?}"
+: "${BOOTB:?}"
+: "${SYSTEMA:?}"
+: "${SYSTEMB:?}"
+
+: "${BOOTA_ENCRYPTED:?}"
+: "${BOOTB_ENCRYPTED:?}"
+: "${SYSTEMA_ENCRYPTED:?}"
+: "${SYSTEMB_ENCRYPTED:?}"
 
 
 prefix=disk/by-slot
