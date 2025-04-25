@@ -20,7 +20,7 @@ case "$op" in
          for script in "${scripts[@]}" ; do
             if [ -x "$script" ] ; then
                s=$(basename "$script")
-               if [[ $s =~ ^[a-zA-Z0-9]+$ ]] ; then
+               if [[ $s =~ ^[a-zA-Z0-9-]+$ ]] ; then
                   env -C "$dir" bash "$s" "$@"
                   err=$?
                   if [ $err -ne 0 ] ; then
