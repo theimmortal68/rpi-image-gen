@@ -32,7 +32,15 @@ fi
 
 
 files=()
-files+=("${IGconf_sys_outputdir}/${IGconf_image_name}"*.${IGconf_image_suffix})
+
+for f in "${IGconf_sys_outputdir}/${IGconf_image_name}"*.${IGconf_image_suffix} ; do
+   files+=($f)
+   [[ -f "$f" ]] || continue
+   
+   # Ensure for rpi-imager that the image size is a multiple of 512 bytes
+   truncate -s %512 $f
+done
+
 files+=("${IGconf_sys_outputdir}/${IGconf_image_name}"*.${IGconf_image_suffix}.sparse)
 files+=("${IGconf_sys_outputdir}/${IGconf_image_name}"*.sbom)
 
