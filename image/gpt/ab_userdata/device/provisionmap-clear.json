@@ -42,42 +42,26 @@
    {
       "slots": {
          "A": {
-            "encrypted": {
-               "luks": {
-                  "version": 2,
-                  "key_size": 512,
-                  "cipher": "aes-xts-plain64",
-                  "hash": "sha256"
-               },
-               "partitions": [
-                  {
-                     "name": "systemA",
-                     "id": "cryptrootA",
-                     "role": "system"
-                  }
-               ]
-            }
+            "partitions": [
+               {
+                  "name": "systemA",
+                  "id": "4",
+                  "role": "system"
+               }
+            ]
          }
       }
    },
    {
       "slots": {
          "B": {
-            "encrypted": {
-               "luks": {
-                  "version": 2,
-                  "key_size": 512,
-                  "cipher": "aes-xts-plain64",
-                  "hash": "sha256"
-               },
-               "partitions": [
-                  {
-                     "name": "systemB",
-                     "id": "cryptrootB",
-                     "role": "system"
-                  }
-               ]
-            }
+            "partitions": [
+               {
+                  "name": "systemB",
+                  "id": "5",
+                  "role": "system"
+               }
+            ]
          }
       }
    },
