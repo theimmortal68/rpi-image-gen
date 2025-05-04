@@ -37,8 +37,8 @@ for f in "${IGconf_sys_outputdir}/${IGconf_image_name}"*.${IGconf_image_suffix} 
    files+=($f)
    [[ -f "$f" ]] || continue
    
-   # Ensure for rpi-imager that the image size is a multiple of 512 bytes
-   truncate -s %512 $f
+   # Ensure that the output image is a multiple of the selected sector size
+   truncate -s %${IGconf_device_sector_size} $f
 done
 
 files+=("${IGconf_sys_outputdir}/${IGconf_image_name}"*.${IGconf_image_suffix}.sparse)
