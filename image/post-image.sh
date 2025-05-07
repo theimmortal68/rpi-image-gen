@@ -32,7 +32,15 @@ fi
 
 
 files=()
-files+=("${IGconf_sys_outputdir}/${IGconf_image_name}"*.${IGconf_image_suffix})
+
+for f in "${IGconf_sys_outputdir}/${IGconf_image_name}"*.${IGconf_image_suffix} ; do
+   files+=($f)
+   [[ -f "$f" ]] || continue
+   
+   # Ensure that the output image is a multiple of the selected sector size
+   truncate -s %${IGconf_device_sector_size} $f
+done
+
 files+=("${IGconf_sys_outputdir}/${IGconf_image_name}"*.${IGconf_image_suffix}.sparse)
 files+=("${IGconf_sys_outputdir}/${IGconf_image_name}"*.sbom)
 
