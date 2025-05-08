@@ -5,8 +5,10 @@ set -eu
 # Install slot rules
 install -m 0644 -D ../device/slot.rules $1/etc/udev/rules.d/90-rpi-slot.rules
 
-# Install provision map - TODO select clear/crypt?
-cp ../device/provisionmap.json ${IGconf_sys_outputdir}/provisionmap.json
+# Install provision map
+if igconf isset image_pmap ; then
+   cp ../device/provisionmap-${IGconf_image_pmap}.json ${IGconf_sys_outputdir}/provisionmap.json
+fi
 
 # Generate slot helper
 mkslot-helper ${IGconf_sys_outputdir}/provisionmap.json > $1/usr/bin/rpi-slot

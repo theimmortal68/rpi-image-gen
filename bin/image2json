@@ -15,8 +15,15 @@ VERSION = "2.0.0"
 IMAGE_KEYS = {"IGconf_device_class",
               "IGconf_device_variant",
               "IGconf_device_storage_type",
+              "IGconf_device_sector_size",
               "IGconf_image_version",
               "IGconf_sys_outputdir"}
+
+
+IMAGE_KEY_TYPES = {
+    "IGconf_device_sector_size": int,
+    # add more as needed
+}
 
 
 top_template = {
@@ -24,7 +31,8 @@ top_template = {
     "IGmeta": [],
     "attributes": {
         "image-name": "unknown",
-        "image-size": "0",
+        "image-size": 0,
+        "image-palign-bytes": "unknown",
     },
     "layout": {
         "partitiontable": [],
@@ -267,10 +275,11 @@ def parse_genimage_config(config_path):
     for img_name, img_data in hdimage_data.items():
         hdimage = img_data.get("hdimage")
         disk_attr["image-name"] = img_name
-        disk_attr["image-size"] = img_data.get("size") if img_data.get("size") else "0"
+        disk_attr["image-size"] = hdimage.get("size") if hdimage.get("size") else 0
+        disk_attr["image-palign"] = hdimage.get("align") if hdimage.get("align") else "0"
         sz = get_artefact_size(img_name)
         if sz:
-            disk_attr["image-size"] = str(sz)
+            disk_attr["image-size"] = sz
 
     # https://github.com/pengutronix/genimage?tab=readme-ov-file#the-image-configuration-options
     gtypes = ["android-sparse", "btrfs", "cpio", "cramfs", "ext2", "ext3",
@@ -301,7 +310,7 @@ def parse_genimage_config(config_path):
                 # percent). The actual size is required for provisioning purposes.
                 sz = get_artefact_size(piname)
                 if sz:
-                    partitions[pname]["size"] = str(sz)
+                    partitions[pname]["size"] = sz
 
                 # If this image has a sparse derivative, tag it
                 for sname, sdata in simgs.items():
@@ -421,8 +430,13 @@ def get_image_meta():
     image_vars = {}
     for key, value in vars.items():
         if key in IMAGE_KEYS:
-            image_vars[key] = value
-
+            if key in IMAGE_KEY_TYPES:
+                try:
+                    image_vars[key] = IMAGE_KEY_TYPES[key](value)
+                except ValueError:
+                    image_vars[key] = None  # or handle error as needed
+            else:
+                image_vars[key] = value
     return image_vars
 
 
@@ -461,6 +475,7 @@ if __name__ == '__main__':
     top_template["IGmeta"] = get_image_meta()
     top_template["attributes"]["image-name"] = os.path.basename(attributes.get("image-name"))
     top_template["attributes"]["image-size"] = attributes.get("image-size")
+    top_template["attributes"]["image-palign-bytes"] = attributes.get("image-palign")
     top_template["layout"]["partitiontable"] = ptable["partitiontable"]
     top_template["layout"]["partitionimages"] = partition_json
     if args.provisionmap:
