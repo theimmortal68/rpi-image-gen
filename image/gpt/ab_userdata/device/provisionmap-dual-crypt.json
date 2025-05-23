@@ -39,29 +39,41 @@
       }
    },
    {
-      "encrypted": {
-         "luks2": {
-            "key_size": 512,
-            "cipher": "aes-xts-plain64",
-            "hash": "sha256",
-            "label": "root",
-            "mname": "cryptroot",
-            "etype": "partitioned"
-         },
-         "slots": {
-            "A": {
+      "slots": {
+         "A": {
+            "encrypted": {
+               "luks2": {
+                  "key_size": 512,
+                  "cipher": "aes-xts-plain64",
+                  "hash": "sha256",
+                  "label": "rootA",
+                  "mname": "cryptrootA",
+                  "etype": "raw"
+               },
                "partitions": [
                   {
-                     "id": "1",
                      "image": "systemA",
                      "role": "system"
                   }
                ]
-            },
-            "B": {
+            }
+         }
+      }
+   },
+   {
+      "slots": {
+         "B": {
+            "encrypted": {
+               "luks2": {
+                  "key_size": 512,
+                  "cipher": "aes-xts-plain64",
+                  "hash": "sha256",
+                  "label": "rootB",
+                  "mname": "cryptrootB",
+                  "etype": "raw"
+               },
                "partitions": [
                   {
-                     "id": "2",
                      "image": "systemB",
                      "role": "system"
                   }
