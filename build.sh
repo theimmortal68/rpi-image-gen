@@ -420,6 +420,7 @@ mkdir -p "$IGconf_sys_deploydir"
 
 # Generate image(s)
 for f in "${IGconf_sys_outputdir}"/genimage*.cfg; do
+   [[ -f "$f" ]] || continue
    run podman unshare env "${ENV_POST_BUILD[@]}" genimage \
       --rootpath ${IGconf_sys_target} \
       --tmppath $GTMP \
