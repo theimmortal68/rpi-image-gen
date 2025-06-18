@@ -11,7 +11,7 @@ case $LABEL in
       case $IGconf_image_rootfs_type in
          ext4)
             cat << EOF > $IMAGEMOUNTPATH/etc/fstab
-UUID=${ROOTUUID} /               ext4 rw,relatime,errors=remount-ro 0 1
+UUID=${ROOTUUID} /               ext4 rw,relatime,errors=remount-ro,commit=30 0 1
 EOF
             ;;
          btrfs)
