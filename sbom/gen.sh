@@ -24,7 +24,7 @@ fi
 
 msg "SBOM: $SYFT scanning $rootfs"
 
-podman unshare syft -c "$SYFTCFG"  scan dir:"$rootfs" \
+syft -c "$SYFTCFG"  scan dir:"$rootfs" \
    --base-path "$rootfs" \
    --source-name "$IGconf_image_name" \
    --source-version "${IGconf_image_version}" \
