@@ -1,7 +1,7 @@
 [
    {
       "attributes": {
-         "PMAPversion": "1.0.0",
+         "PMAPversion": "1.2.0",
          "system_type": "slotted"
       }
    },
@@ -18,8 +18,10 @@
             "partitions": [
                {
                   "image": "bootA",
-                  "id": "2",
-                  "role": "boot"
+                  "static": {
+                     "uuid": "<BOOTA_UUID>",
+                     "role": "boot"
+                  }
                }
             ]
          }
@@ -31,8 +33,10 @@
             "partitions": [
                {
                   "image": "bootB",
-                  "id": "3",
-                  "role": "boot"
+                  "static": {
+                     "uuid": "<BOOTB_UUID>",
+                     "role": "boot"
+                  }
                }
             ]
          }
@@ -45,6 +49,7 @@
             "cipher": "aes-xts-plain64",
             "hash": "sha256",
             "label": "root",
+            "uuid": "<CRYPT_UUID>",
             "mname": "cryptroot",
             "etype": "partitioned"
          },
@@ -52,18 +57,22 @@
             "A": {
                "partitions": [
                   {
-                     "id": "1",
                      "image": "systemA",
-                     "role": "system"
+                     "static": {
+                        "uuid": "<SYSTEMA_UUID>",
+                        "role": "system"
+                     }
                   }
                ]
             },
             "B": {
                "partitions": [
                   {
-                     "id": "2",
                      "image": "systemB",
-                     "role": "system"
+                     "static": {
+                        "uuid": "<SYSTEMB_UUID>",
+                        "role": "system"
+                     }
                   }
                ]
             }

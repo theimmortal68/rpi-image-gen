@@ -11,11 +11,13 @@ die (){
 }
 
 
-: "${BOOTA:?}"
-: "${BOOTB:?}"
-: "${SYSTEMA:?}"
-: "${SYSTEMB:?}"
+: "${BOOTA_UUID:?}"
+: "${BOOTB_UUID:?}"
+: "${SYSTEMA_UUID:?}"
+: "${SYSTEMB_UUID:?}"
 
+
+# Future scope may require
 : "${BOOTA_ENCRYPTED:?}"
 : "${BOOTB_ENCRYPTED:?}"
 : "${SYSTEMA_ENCRYPTED:?}"
@@ -28,6 +30,7 @@ prefix=disk/by-slot
 # mandatory
 command -v od > /dev/null 2>&1 || die "!od"
 command -v sed > /dev/null 2>&1 || die "!sed"
+command -v blkid > /dev/null 2>&1 || die "!blkid"
 
 
 usage()
@@ -38,9 +41,8 @@ Usage
 Slot delegation helper for AB systems
 
 Write out slot information for the given argument based on option specifiers.
-The arg can be a kernel device (eg mmcblk0p1) or a decimal partition number.
-Options dictate what is written to stdout. If no arg is provided, the current
-boot partition is used.
+If provided, the arg is a filesystem UUID. Options dictate what is written to
+stdout. If no arg is provided, the current boot configuration is assumed.
 
   [-f] fully qualified device node path
   [-u] udev - output suitable for udev rules (SLOT=<val>)
@@ -90,16 +92,6 @@ bootmode=$(printf "%d" "$bootmode")
 bootpart=$(printf "%d" "$bootpart")
 
 
-if [ "$nopt" -eq 0 ] && [ -z "$arg" ] ; then
-   echo "${bootmode}:${bootpart}"
-   exit 0
-elif [ -z "$arg" ] ; then
-   arg="$bootpart"
-else
-   :
-fi
-
-
 case $bootmode in
    1) bootdev=mmcblk0 ;;
    6) bootdev=nvme0n1 ;;
@@ -107,70 +99,108 @@ case $bootmode in
 esac
 
 
-test -e /sys/class/block/$bootdev || die "bad base blockdev"
+test -e /sys/class/block/$bootdev || die "Bad base blockdev $bootdev"
 
 
-case $bootdev in
-   mmc*|nvme*)
-      for d in BOOTA BOOTB SYSTEMA SYSTEMB ; do
-         eval crypt=\$"${d}_ENCRYPTED"
-         if [ "$crypt" = "y" ] ; then
-            eval "bdev=\$${d}"
-            test -e "/dev/mapper/${bdev}" || err "mapped dev $bdev unavailable"
-         else
-            _v="k${d}"
-            eval "$_v=\${bootdev}p\${$d}"
-            eval "bdev=\$$_v"
-            # shellcheck disable=SC2154
-            test -e "/sys/class/block/${bdev}" || die "bad blockdev $bdev"
-         fi
-      done
-      ;;
-   *);;
-esac
+_basename() {
+    echo "$1" | sed 's:.*/::'
+}
 
 
-case $bootpart in
-   "$BOOTA") bootpart_other="$BOOTB" ;;
-   "$BOOTB") bootpart_other="$BOOTA" ;;
-   *) die "bootpart $bootpart not found in pmap" ;;
-esac
+uuid2dev() {
+    [ -z "$1" ] && return 1
+    _dev=$(blkid -t UUID=${1} -o device) || return 1
+    echo $(_basename "$_dev")
+}
 
 
-unset slot
+dev2uuid() {
+    [ -z "$1" ] && return 1
+    blkid -s UUID -o value "/dev/${1}"
+}
+
+
+# Establish boot device
+bootblkdev=${bootdev}p${bootpart}
+test -b "/dev/${bootblkdev}" || die "Bad boot blockdev $bootblkdev"
+bootuuid=$(dev2uuid "$bootblkdev") || die "No UUID for boot device $bootblkdev"
+
+
+# No opts and arg means show boot device info only
+if [ "$nopt" -eq 0 ] && [ -z "$arg" ] ; then
+   echo "boot:${bootmode}:${bootpart}"
+   echo "blk:/dev/${bootblkdev}:${bootuuid}"
+   exit 0
+fi
+
+
+# Resolve slot configuration UUIDs
 # shellcheck disable=SC2154
-case $arg in
-   "$BOOTA"|"$kBOOTA")
-      if [ "$bootpart" -eq "$BOOTA" ] ; then slot="active/boot" ; fi
-      if [ "$bootpart" -eq "$BOOTB" ] ; then slot="other/boot" ; fi
+for b in BOOTA BOOTB SYSTEMA SYSTEMB ; do
+    var="${b}_UUID"
+    eval 'val="$'"$var"'"'
+    dev=$(uuid2dev "$val") || die "Error mapping UUID $val to blkdev"
+    eval "$b=\$dev"
+done
+
+
+# Mandatory
+: "${BOOTA:?}"
+: "${BOOTB:?}"
+: "${SYSTEMA:?}"
+: "${SYSTEMB:?}"
+
+
+if [ -z "$arg" ] ; then
+    dev="$bootblkdev"
+else
+    dev=$(uuid2dev "$arg") || die "No such UUID"
+fi
+
+
+# Establish blk device slot
+unset slot
+case $dev in
+   "$BOOTA")
+      if [ "$bootblkdev" = "$BOOTA" ] ; then slot="active/boot" ; fi
+      if [ "$bootblkdev" = "$BOOTB" ] ; then slot="other/boot" ; fi
       ;;
-   "$BOOTB"|"$kBOOTB")
-      if [ "$bootpart" -eq "$BOOTB" ] ; then slot="active/boot" ; fi
-      if [ "$bootpart" -eq "$BOOTA" ] ; then slot="other/boot" ; fi
+   "$BOOTB")
+      if [ "$bootblkdev" = "$BOOTB" ] ; then slot="active/boot" ; fi
+      if [ "$bootblkdev" = "$BOOTA" ] ; then slot="other/boot" ; fi
       ;;
-   "$SYSTEMA"|"$kSYSTEMA")
-      if [ "$bootpart" -eq "$BOOTA" ] ; then slot="active/system" ; fi
-      if [ "$bootpart" -eq "$BOOTB" ] ; then slot="other/system" ; fi
+   "$SYSTEMA")
+      if [ "$bootblkdev" = "$BOOTA" ] ; then slot="active/system" ; fi
+      if [ "$bootblkdev" = "$BOOTB" ] ; then slot="other/system" ; fi
       ;;
-   "$SYSTEMB"|"$kSYSTEMB")
-      if [ "$bootpart" -eq "$BOOTB" ] ; then slot="active/system" ; fi
-      if [ "$bootpart" -eq "$BOOTA" ] ; then slot="other/system" ; fi
+   "$SYSTEMB")
+      if [ "$bootblkdev" = "$BOOTB" ] ; then slot="active/system" ; fi
+      if [ "$bootblkdev" = "$BOOTA" ] ; then slot="other/system" ; fi
       ;;
 esac
 
 
 if [ -z ${slot+x} ] ; then
-   die "no slot found"
+   die "No slot for blkdev $dev"
 fi
 
 
+# Post-process slot based on opts
 if [ $match -eq 1 ] ; then slot=$(echo "$slot" | sed -e 's|boot|system|;t' -e 's|system|boot|') ; fi
 
 if [ $fqname -eq 1 ] ; then
    slot="/dev/${prefix}/${slot}"
+
 elif [ $udev -eq 1 ] ; then
    slot="SLOT=${prefix}/${slot}"
+
 elif [ $tryboot -eq 1 ] ; then
+   case $bootblkdev in
+      "$BOOTA") bootpart_other=$(echo "$BOOTB" | sed 's/.*p\([0-9][0-9]*\)$/\1/') ;;
+      "$BOOTB") bootpart_other=$(echo "$BOOTA" | sed 's/.*p\([0-9][0-9]*\)$/\1/') ;;
+      *) die "bootpart $bootpart not found in pmap" ;;
+   esac
+
    cat << EOF
 [all]
 tryboot_a_b=1
@@ -179,6 +209,7 @@ boot_partition=${bootpart}
 boot_partition=${bootpart_other}
 EOF
    exit 0
+
 else
    :
 fi
