@@ -3,7 +3,7 @@
 set -eu
 
 LABEL="$1"
-BOOTUUID="${2:0:4}-${2:4:4}"
+BOOTUUID="$2"
 ROOTUUID="$3"
 
 case $LABEL in
@@ -24,7 +24,7 @@ EOF
       esac
 
       cat << EOF >> $IMAGEMOUNTPATH/etc/fstab
-UUID=${BOOTUUID^^} /boot/firmware  vfat defaults,rw,noatime,errors=remount-ro 0 2
+UUID=${BOOTUUID} /boot/firmware  vfat defaults,rw,noatime,errors=remount-ro 0 2
 EOF
       ;;
    BOOT)
