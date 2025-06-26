@@ -14,7 +14,7 @@ mmdebstrap:
          echo "$IGconf_meta_ssh_pubkey_user1" > $1/home/${IGconf_device_user1}/.ssh/authorized_keys
       fi
     - |-
-      if igconf is_y meta_sshd_pubkey_only ; then
+      if igconf isy meta_sshd_pubkey_only ; then
          mkdir -p $1/etc/ssh/sshd_config.d
          cat <<- 'EOCHROOT' > $1/etc/ssh/sshd_config.d/01pubkey-only.conf
       PermitRootLogin no

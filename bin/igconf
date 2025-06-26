@@ -103,6 +103,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]] ; then
          exit $?
          ;;
       *)
+         >&2 echo "Error: invalid igconf op ($op) args: $@" ; exit 1
          ;;
    esac
    exit 1
