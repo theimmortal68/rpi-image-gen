@@ -1,6 +1,6 @@
 # Minimal system with apt, rpi utils and wired networking
 
-debian/bookworm/arm64/base-apt
+debian/bookworm/arm64/base-slim
 rpi/debian/bookworm/apt
 rpi/misc-utils
 rpi/base/essential
