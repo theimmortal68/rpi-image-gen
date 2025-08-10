@@ -2,5 +2,5 @@
 name: net-mod
 mmdebstrap:
   customize-hooks:
-    - "install -Dm 644 $RPI_TEMPLATES/boot-firmware/headless_nm.txt.template $1/boot/firmware/headless_nm.txt.template"
+    - install -Dm 644 "$RPI_TEMPLATES/boot-firmware/headless_nm.txt.template" "$1/boot/firmware/headless_nm.txt.template"
 
