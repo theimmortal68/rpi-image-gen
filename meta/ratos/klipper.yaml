@@ -26,39 +26,40 @@ mmdebstrap:
     - python3-matplotlib
     - libatlas-base-dev
     - libopenblas-dev
+  customize-hooks:
+    - usermod -a -G tty,dialout "${IGconf_device_user1}"
+
+    - runuser -u "${IGconf_device_user1}" -- git clone --depth=1 --branch "${BRANCH}" "${REPO}" "${SRC_DIR}"
+
+    - |
+      for dir in ${PRINTER_DATA_DIRS}; do
+        if [ ! -d "$1/home/${IGconf_device_user1}/$dir" ]; then
+          echo "Creating $dir"
+          mkdir -p "$1/home/${IGconf_device_user1}/$dir"
+          chown -R "${IGconf_device_user1}:${IGconf_device_user1}" "$1/home/${IGconf_device_user1}/$dir"
+        fi
+      done
+
+    - |
+      if [ ! -d "$ENV_DIR" ]; then
+        runuser -u "${IGconf_device_user1}" -- virtualenv -p python3 "${ENV_DIR}"
+      else
+        echo "Virtualenv already exists; skipping."
+      fi
+
+    - runuser -u "${IGconf_device_user1}" -- bash -c "${ENV_DIR}/bin/pip install -r ${SRC_DIR}/scripts/klippy-requirements.txt"
+    - runuser -u "${IGconf_device_user1}" -- bash -c "${ENV_DIR}/bin/pip install numpy"
+
+    - install -Dm 644 "$RPI_TEMPLATES/etc-systemd-system/klipper.service" "$1/etc/systemd/system/klipper.service"
+    - install -Dm 644 "$RPI_TEMPLATES/home-printer_data-systemd/klipper.env" "$1/home/${IGconf_device_user1}/printer_data/systemd/klipper.env"
+
+    - chown -R "${IGconf_device_user1}:${IGconf_device_user1}" "$1/home/${IGconf_device_user1}"
+
+    - $BDEBSTRAP_HOOKS/enable-units "$1" klipper
+
 env:
   SRC_DIR: "$1/home/${IGconf_device_user1}/klipper"
   ENV_DIR: "$1/home/${IGconf_device_user1}/klippy-env"
   REPO: "https://github.com/KalicoCrew/kalico.git"
   BRANCH: "bleeding-edge-v2"
   PRINTER_DATA_DIRS: "printer_data printer_data/config printer_data/comms printer_data/logs printer_data/systemd"
-customize-hooks:
-  - usermod -a -G tty,dialout "${IGconf_device_user1}"
-
-  - runuser -u "${IGconf_device_user1}" -- git clone --depth=1 --branch "${BRANCH}" "${REPO}" "${SRC_DIR}"
-
-  - |
-    for dir in ${PRINTER_DATA_DIRS}; do
-      if [ ! -d "$1/home/${IGconf_device_user1}/$dir" ]; then
-        echo "Creating $dir"
-        mkdir -p "$1/home/${IGconf_device_user1}/$dir"
-        chown -R "${IGconf_device_user1}:${IGconf_device_user1}" "$1/home/${IGconf_device_user1}/$dir"
-      fi
-    done
-
-  - |
-    if [ ! -d "$ENV_DIR" ]; then
-      runuser -u "${IGconf_device_user1}" -- virtualenv -p python3 "${ENV_DIR}"
-    else
-      echo "Virtualenv already exists; skipping."
-    fi
-
-  - runuser -u "${IGconf_device_user1}" -- bash -c "${ENV_DIR}/bin/pip install -r ${SRC_DIR}/scripts/klippy-requirements.txt"
-  - runuser -u "${IGconf_device_user1}" -- bash -c "${ENV_DIR}/bin/pip install numpy"
-
-  - install -Dm 644 "$RPI_TEMPLATES/etc-systemd-system/klipper.service" "$1/etc/systemd/system/klipper.service"
-  - install -Dm 644 "$RPI_TEMPLATES/home-printer_data-systemd/klipper.env" "$1/home/${IGconf_device_user1}/printer_data/systemd/klipper.env"
-
-  - chown -R "${IGconf_device_user1}:${IGconf_device_user1}" "$1/home/${IGconf_device_user1}"
-
-  - $BDEBSTRAP_HOOKS/enable-units "$1" klipper
