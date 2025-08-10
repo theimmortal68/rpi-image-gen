@@ -6,7 +6,7 @@ mmdebstrap:
     - git
   customize-hooks:
     # Clone kiauh repository inside chroot as the target user
-    - sh -c 'chroot "$1" sh -c "runuser -u ${IGconf_device_user1} -- git clone --depth=1 https://github.com/dw-o/kiauh /home/${IGconf_device_user1}/kiauh"'
+    - chroot "$1" runuser -u ${IGconf_device_user1} -- git clone --depth=1 https://github.com/dw-o/kiauh /home/${IGconf_device_user1}/kiauh
 
     # Fix ownership for the target user's home directory
-    - sh -c 'chroot "$1" sh -c "chown -R ${IGconf_device_user1}:${IGconf_device_user1} /home/${IGconf_device_user1}"'
+    - chroot "$1" chown -R ${IGconf_device_user1}:${IGconf_device_user1} /home/${IGconf_device_user1}
