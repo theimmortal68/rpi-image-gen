@@ -1,0 +1,5 @@
+---
+name: kiauh
+mmdebstrap:
+  customize-hooks:
+    - sudo -u "${IGconf_device_user1}" git clone https://github.com/dw-o/kiauh "/home/${IGconf_device_user1}/kiauh"
