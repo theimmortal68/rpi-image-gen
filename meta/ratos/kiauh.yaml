@@ -5,7 +5,6 @@ mmdebstrap:
   packages:
     - git
   customize-hooks:
-    # Clone KIAUH as the target user inside the chroot
     - |
       chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
         set -eu
