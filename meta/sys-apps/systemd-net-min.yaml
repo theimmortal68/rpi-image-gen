@@ -5,11 +5,13 @@ mmdebstrap:
     - systemd
     - systemd-sysv
     - systemd-timesyncd
+    - network-manager
   customize-hooks:
-    - $BDEBSTRAP_HOOKS/enable-units "$1" systemd-networkd
+    - $BDEBSTRAP_HOOKS/enable-units "$1" NetworkManager
     - $BDEBSTRAP_HOOKS/enable-units "$1" systemd-timesyncd
     - mkdir -p $1/etc/systemd/network $1/etc/systemd/system/getty@tty1.service.d
     - ln -sf /dev/null $1/etc/systemd/network/99-default.link
     - ln -sf /dev/null $1/etc/systemd/network/73-usb-net-by-mac.link
     - $META_HOOKS/systemd/netgen eth0 > $1/etc/systemd/network/01-eth0.network
     - $META_HOOKS/systemd/ttyset noclear > $1/etc/systemd/system/getty@tty1.service.d/noclear.conf
+    - echo "nameserver 8.8.8.8" > /etc/resolv.conf
