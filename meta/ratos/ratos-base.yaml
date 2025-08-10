@@ -1,6 +1,6 @@
 ---
 name: ratos-base
-mmdebstrap: 
+mmdebstrap:
   packages:
     - avahi-daemon
     - bash-completion
@@ -18,7 +18,13 @@ mmdebstrap:
     - unzip
     - nodejs
   customize-hooks:
-    - printf 'extra-index-url=https://www.piwheels.org/simple' >> "$1/etc/pip.conf"
-    - mkdir -p "$1/etc/systemd/system/getty@tty1.service.d"
-    - printf '[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin %s --noclear %%I \\$TERM\n' "${IGconf_device_user1}"
+    # Configure pip to use piwheels for faster ARM package installs
+    - "printf 'extra-index-url=https://www.piwheels.org/simple\n' >> \"$1/etc/pip.conf\""
+
+    # Create systemd override directory for autologin
+    - "mkdir -p \"$1/etc/systemd/system/getty@tty1.service.d\""
+
+    # Create autologin override file, using %s to safely substitute user
+    - |
+      printf '[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin %s --noclear %%I \\$TERM\n' "${IGconf_device_user1}" \
       >> "$1/etc/systemd/system/getty@tty1.service.d/autologin.conf"
