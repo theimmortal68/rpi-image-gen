@@ -1,0 +1,11 @@
+# Minimal system with apt, rpi utils and wired networking
+
+debian/bookworm/arm64/base-apt
+rpi/debian/bookworm/apt
+rpi/misc-utils
+rpi/base/essential
+rpi/user-credentials
+rpi/misc-skel
+sys-apps/systemd-net-min
+sys-apps/fake-hwclock
+net-misc/openssh-server
