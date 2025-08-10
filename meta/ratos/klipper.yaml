@@ -27,45 +27,74 @@ mmdebstrap:
     - libatlas-base-dev
     - libopenblas-dev
   customize-hooks:
-    # All in-chroot work in one block (run as user, no chown, no idempotence)
+    # --- In-chroot: add user to serial groups
     - |
+      echo "[klipper] usermod add tty,dialout"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        usermod -a -G tty,dialout "$IGUSER"
+      '
+
+    # --- In-chroot: clone source (no fallback, no idempotence)
+    - |
+      echo "[klipper] clone repo"
       chroot "$1" env \
         IGUSER="${IGconf_device_user1}" \
         REPO="https://github.com/KalicoCrew/kalico.git" \
         BRANCH="bleeding-edge-v2" \
-        PRINTER_DATA_DIRS="printer_data printer_data/config printer_data/comms printer_data/logs printer_data/systemd" \
         sh -lc '
           set -eu
-          # serial groups
-          usermod -a -G tty,dialout "$IGUSER"
-
-          # clone (fails if dir exists — intentional)
           runuser -u "$IGUSER" -- git clone --depth=1 --branch "$BRANCH" "$REPO" "/home/$IGUSER/klipper"
-
-          # printer_data dirs
-          for dir in $PRINTER_DATA_DIRS; do
-            runuser -u "$IGUSER" -- mkdir -p "/home/$IGUSER/$dir"
-          done
-
-          # venv + deps
-          ENV_DIR="/home/$IGUSER/klippy-env"
-          SRC_DIR="/home/$IGUSER/klipper"
-          runuser -u "$IGUSER" -- virtualenv -p python3 "$ENV_DIR"
-          runuser -u "$IGUSER" -- bash -lc "\"$ENV_DIR/bin/pip\" install -r \"$SRC_DIR/scripts/klippy-requirements.txt\""
-          runuser -u "$IGUSER" -- bash -lc "\"$ENV_DIR/bin/pip\" install numpy"
         '
 
-    # Host-side installs + enable via a tiny helper (sanitize env paths, pass rootfs as $1)
+    # --- In-chroot: create printer_data (fail if exists; no -p)
     - |
-      set -eu
-      RT="$(printf '%s' "${RPI_TEMPLATES}"   | tr -d '\r\n')"
-      BH="$(printf '%s' "${BDEBSTRAP_HOOKS}" | tr -d '\r\n')"
+      echo "[klipper] mkdir printer_data tree"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        base="/home/$IGUSER/printer_data"
+        mkdir "$base"
+        mkdir "$base/config"
+        mkdir "$base/comms"
+        mkdir "$base/logs"
+        mkdir "$base/systemd"
+      '
 
-      tmp="$(mktemp -t klipper-host-XXXXXX.sh)"
-      cat > "$tmp" <<EOS
-      install -Dm 644 "$RT/etc-systemd-system/klipper.service" "\$1/etc/systemd/system/klipper.service"
-      install -Dm 644 "$RT/home-printer_data-systemd/klipper.env" "\$1/home/${IGconf_device_user1}/printer_data/systemd/klipper.env"
-      "\$BH/enable-units" "\$1" klipper
-      EOS
-      sh "$tmp" "$1"
-      rm -f "$tmp"
+    # --- In-chroot: create virtualenv (no idempotence)
+    - |
+      echo "[klipper] create virtualenv"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        runuser -u "$IGUSER" -- virtualenv -p python3 "/home/$IGUSER/klippy-env"
+      '
+
+    # --- In-chroot: install Python requirements
+    - |
+      echo "[klipper] pip install requirements"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        runuser -u "$IGUSER" -- bash -lc '"/home/$IGUSER/klippy-env/bin/pip" install -r "/home/$IGUSER/klipper/scripts/klippy-requirements.txt"'
+      '
+
+    # --- In-chroot: install numpy explicitly
+    - |
+      echo "[klipper] pip install numpy"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        runuser -u "$IGUSER" -- bash -lc '"/home/$IGUSER/klippy-env/bin/pip" install numpy'
+      '
+
+    # --- Host-side: install systemd unit
+    - |
+      echo "[klipper] install service unit"
+      install -Dm 644 "$RPI_TEMPLATES/etc-systemd-system/klipper.service" "$1/etc/systemd/system/klipper.service"
+
+    # --- Host-side: install env file
+    - |
+      echo "[klipper] install klipper.env"
+      install -Dm 644 "$RPI_TEMPLATES/home-printer_data-systemd/klipper.env" "$1/home/${IGconf_device_user1}/printer_data/systemd/klipper.env"
+
+    # --- Host-side: enable unit
+    - |
+      echo "[klipper] enable klipper"
+      "$BDEBSTRAP_HOOKS/enable-units" "$1" klipper
