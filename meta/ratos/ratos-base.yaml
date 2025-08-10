@@ -19,29 +19,33 @@ mmdebstrap:
     - unzip
     - nodejs
   customize-hooks:
-    # pip: prefer piwheels with PyPI as fallback
-    - install -Dm 644 /dev/null "$1/etc/pip.conf"
+    # In-chroot edits (one block)
     - |
-      cat > "$1/etc/pip.conf" << 'EOF'
-      [global]
-      index-url = https://www.piwheels.org/simple
-      extra-index-url = https://pypi.org/simple
-      EOF
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        cat > /etc/pip.conf << "EOF"
+        [global]
+        index-url = https://www.piwheels.org/simple
+        extra-index-url = https://pypi.org/simple
+        EOF
 
-    # systemd getty autologin override
-    - mkdir -p "$1/etc/systemd/system/getty@tty1.service.d"
+        mkdir -p /etc/systemd/system/getty@tty1.service.d
+        printf "[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin %s --noclear %%I \\$TERM\n" "$IGUSER" \
+          > /etc/systemd/system/getty@tty1.service.d/autologin.conf
+      '
+
+    # Host-side installs + enable via a tiny helper (pass rootfs as $1)
     - |
-      printf '[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin %s --noclear %%I \\$TERM\n' "${IGconf_device_user1}" \
-      > "$1/etc/systemd/system/getty@tty1.service.d/autologin.conf"
+      set -eu
+      tmp="$(mktemp -t ratos-host-XXXXXX.sh)"
+      cat > "$tmp" <<'EOS'
+      install -Dm 644 "$RPI_TEMPLATES/boot-firmware/headless_nm.txt.template" "$1/boot/firmware/headless_nm.txt.template"
+      install -Dm 644 "$RPI_TEMPLATES/boot-firmware/WiFi-README.txt"             "$1/boot/firmware/WiFi-README.txt"
+      install -Dm 644 "$RPI_TEMPLATES/etc-systemd-system/headless_nm.service"    "$1/etc/systemd/system/headless_nm.service"
+      install -Dm 755 "$RPI_TEMPLATES/usr-local-bin/headless_nm"                 "$1/usr/local/bin/headless_nm"
+      install -Dm 644 "$RPI_TEMPLATES/etc-udev-rules.d/070-wifi-powersave.rules" "$1/etc/udev/rules.d/070-wifi-powersave.rules"
 
-    # Install headless_nm assets
-    - install -Dm 644 "$RPI_TEMPLATES/boot-firmware/headless_nm.txt.template" "$1/boot/firmware/headless_nm.txt.template"
-    - install -Dm 644 "$RPI_TEMPLATES/boot-firmware/WiFi-README.txt" "$1/boot/firmware/WiFi-README.txt"
-    - install -Dm 644 "$RPI_TEMPLATES/etc-systemd-system/headless_nm.service" "$1/etc/systemd/system/headless_nm.service"
-    - install -Dm 755 "$RPI_TEMPLATES/usr-local-bin/headless_nm" "$1/usr/local/bin/headless_nm"
-
-    # Enable headless_nm service
-    - $BDEBSTRAP_HOOKS/enable-units "$1" headless_nm
-
-    # udev rules for wifi powersave
-    - install -Dm 644 "$RPI_TEMPLATES/etc-udev-rules.d/070-wifi-powersave.rules" "$1/etc/udev/rules.d/070-wifi-powersave.rules"
+      "$BDEBSTRAP_HOOKS/enable-units" "$1" headless_nm
+      EOS
+      sh "$tmp" "$1"
+      rm -f "$tmp"
