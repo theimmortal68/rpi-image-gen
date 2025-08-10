@@ -39,15 +39,18 @@ mmdebstrap:
         mkdir -p /etc/systemd/system/getty@tty1.service.d
       '
 
-    # --- In-chroot: write autologin override
+    # --- In-chroot: write autologin.conf via single-quoted heredoc
     - |
-      echo "[ratos-base] write autologin.conf"
+      echo "[ratos-base] write autologin.conf (heredoc)"
       chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
         set -eu
-        printf "[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin %s --noclear %%I \\$TERM\n" "$IGUSER" \
-          > /etc/systemd/system/getty@tty1.service.d/autologin.conf
+        cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<'\'EOF\''
+        [Service]
+        ExecStart=
+        ExecStart=-/sbin/agetty --autologin '"$IGUSER"' --noclear %I \$TERM
+        EOF
       '
-
+  
     # --- Host-side: copy headless_nm template
     - |
       echo "[ratos-base] install headless_nm.txt.template"
