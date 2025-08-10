@@ -6,7 +6,7 @@ mmdebstrap:
     - systemd-sysv
     - systemd-timesyncd
     - network-manager
-    - wpa_supplicant
+    - wpasupplicant
   customize-hooks:
     - $BDEBSTRAP_HOOKS/enable-units "$1" NetworkManager
     - $BDEBSTRAP_HOOKS/enable-units "$1" wpa_supplicant

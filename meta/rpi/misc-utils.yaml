@@ -8,3 +8,9 @@ mmdebstrap:
     - raspi-utils-core
     - raspi-utils-dt
     - flashrom
+    - i2c-tools
+    - dphys-swapfile
+  customize-hooks:
+    - printf "i2c-dev\n" > $1/etc/modules
+    - sed -i 's/^CONF_SWAPSIZE.*/'CONF_SWAPSIZE=1024'/' $1/etc/dphys-swapfile
+    - sed -i 's/^CONF_MAXSWAP.*/'CONF_MAXSWAP=4096'/' $1/etc/dphys-swapfile
