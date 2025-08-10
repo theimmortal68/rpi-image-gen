@@ -37,11 +37,11 @@ mmdebstrap:
     - install -Dm 755 "$RPI_TEMPLATES/usr-local-bin/headless_nm" "$1/usr/local/bin/headless_nm"
 
     # Enable the headless_nm systemd unit
-    - "$BDEBSTRAP_HOOKS/enable-units" "$1" headless_nm
+    - $BDEBSTRAP_HOOKS/enable-units "$1" headless_nm
 
     # Ensure udev rules dir exists and copy wifi-powersave rules
     - mkdir -p "$1/etc/udev/rules.d"
     - install -Dm 644 "$RPI_TEMPLATES/etc-udev-rules.d/070-wifi-powersave.rules" "$1/etc/udev/rules.d/070-wifi-powersave.rules"
 
     # Fix ownership for target user's home directory
-    - sh -c 'chroot "$1" sh -c "chown -R ${IGconf_device_user1}:${IGconf_device_user1} /home/${IGconf_device_user1}"'
+    - chroot "$1" sh -c "chown -R ${IGconf_device_user1}:${IGconf_device_user1} /home/${IGconf_device_user1}"
