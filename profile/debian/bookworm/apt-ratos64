@@ -10,3 +10,4 @@ sys-apps/systemd-net-min
 sys-apps/fake-hwclock
 net-misc/openssh-server
 ratos/ratos-base
+ratos/net-mod
