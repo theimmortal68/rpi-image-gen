@@ -1,43 +1,42 @@
 ---
 name: klipper
+mmdebstrap:
+  variant: apt
+  packages:
+    - git
+    - virtualenv
+    - python3-dev
+    - libffi-dev
+    - build-essential
+    - libncurses-dev
+    - pkg-config
+    - libusb-dev
+    - libusb-1.0-0-dev
+    - avrdude
+    - gcc-avr
+    - binutils-avr
+    - avr-libc
+    - stm32flash
+    - dfu-util
+    - libnewlib-arm-none-eabi
+    - gcc-arm-none-eabi
+    - binutils-arm-none-eabi
+    - libusb-1.0-0
+    - python3-numpy
+    - python3-matplotlib
+    - libatlas-base-dev
+    - libopenblas-dev
 env:
   SRC_DIR: "$1/home/${IGconf_device_user1}/klipper"
   ENV_DIR: "$1/home/${IGconf_device_user1}/klippy-env"
   REPO: "https://github.com/KalicoCrew/kalico.git"
-  BRANCH: "bleeding-egde-v2"
+  BRANCH: "bleeding-edge-v2"
   PRINTER_DATA_DIRS: "printer_data printer_data/config printer_data/comms printer_data/logs printer_data/systemd"
-packages:
-  - git
-  - virtualenv
-  - python3-dev
-  - libffi-dev
-  - build-essential
-  - libncurses-dev
-  - pkg-config
-  - libusb-dev
-  - libusb-1.0-0-dev
-  - avrdude
-  - gcc-avr
-  - binutils-avr
-  - avr-libc
-  - stm32flash
-  - dfu-util
-  - libnewlib-arm-none-eabi
-  - gcc-arm-none-eabi
-  - binutils-arm-none-eabi
-  - libusb-1.0-0
-  - python3-numpy
-  - python3-matplotlib
-  - libatlas-base-dev
-  - libopenblas-dev
 customize-hooks:
-  # Add user to required groups
   - usermod -a -G tty,dialout "${IGconf_device_user1}"
 
-  # Clone Kalico "Klipper" github
   - runuser -u "${IGconf_device_user1}" -- git clone --depth=1 --branch "${BRANCH}" "${REPO}" "${SRC_DIR}"
 
-  # Create printer_data subdirectories if missing
   - |
     for dir in ${PRINTER_DATA_DIRS}; do
       if [ ! -d "$1/home/${IGconf_device_user1}/$dir" ]; then
@@ -47,7 +46,6 @@ customize-hooks:
       fi
     done
 
-  # Setup virtualenv and install python dependencies
   - |
     if [ ! -d "$ENV_DIR" ]; then
       runuser -u "${IGconf_device_user1}" -- virtualenv -p python3 "${ENV_DIR}"
@@ -55,15 +53,12 @@ customize-hooks:
       echo "Virtualenv already exists; skipping."
     fi
 
-  - runuser -u "${IGconf_device_user1}" -- "${ENV_DIR}/bin/pip install -r ${SRC_DIR}/scripts/klippy-requirements.txt"
-  - runuser -u "${IGconf_device_user1}" -- "${ENV_DIR}/bin/pip install numpy"
+  - runuser -u "${IGconf_device_user1}" -- bash -c "${ENV_DIR}/bin/pip install -r ${SRC_DIR}/scripts/klippy-requirements.txt"
+  - runuser -u "${IGconf_device_user1}" -- bash -c "${ENV_DIR}/bin/pip install numpy"
 
-  # Install systemd service files with directory creation
   - install -Dm 644 "$RPI_TEMPLATES/etc-systemd-system/klipper.service" "$1/etc/systemd/system/klipper.service"
   - install -Dm 644 "$RPI_TEMPLATES/home-printer_data-systemd/klipper.env" "$1/home/${IGconf_device_user1}/printer_data/systemd/klipper.env"
 
-  # Fix ownership recursively on home directory
-  - chown -R "${IGconf_device_user1}":"${IGconf_device_user1}" "$1/home/${IGconf_device_user1}"
+  - chown -R "${IGconf_device_user1}:${IGconf_device_user1}" "$1/home/${IGconf_device_user1}"
 
-  # Enable klipper service (fix quoting)
   - $BDEBSTRAP_HOOKS/enable-units "$1" klipper
