@@ -1,6 +1,7 @@
 ---
 name: ratos-base
 mmdebstrap:
+  variant: apt
   packages:
     - avahi-daemon
     - bash-completion
