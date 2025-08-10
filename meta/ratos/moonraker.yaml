@@ -17,26 +17,8 @@ mmdebstrap:
     # Copy moonraker.conf to config dir
     - install -Dm 644 "$RPI_TEMPLATES/home-printer_data-config/moonraker.conf" "$1/home/${IGconf_device_user1}/printer_data/config/moonraker.conf"
 
-    # Enable moonraker service
-    - $BDEBSTRAP_HOOKS/enable-units "$1" moonraker
----
-name: moonraker
-mmdebstrap:
-  variant: apt
-  packages:
-    - git
-  customize-hooks:
-    # Add user to required groups
-    - usermod -a -G tty,dialout "${IGconf_device_user1}"
-
-    # Clone moonraker repository
-    - runuser -u "${IGconf_device_user1}" -- git clone --depth=1 "${REPO}" "$1/home/${IGconf_device_user1}/moonraker"
-
-    # Run moonraker installer
-    - runuser -u "${IGconf_device_user1}" -- "$1/home/${IGconf_device_user1}/moonraker/scripts/install-moonraker.sh -s -z"
-
-    # Copy moonraker.conf to config dir
-    - install -Dm 644 "$RPI_TEMPLATES/home-printer_data-config/moonraker.conf" "$1/home/${IGconf_device_user1}/printer_data/config/moonraker.conf"
+    # Fix ownership for user directories
+    - "chown -R ${IGconf_device_user1}:${IGconf_device_user1} $1/home/${IGconf_device_user1}"
 
     # Enable moonraker service
     - $BDEBSTRAP_HOOKS/enable-units "$1" moonraker
