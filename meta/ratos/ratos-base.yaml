@@ -18,7 +18,7 @@ mmdebstrap:
     - unzip
     - nodejs
   customize-hooks:
-    - echo "extra-index-url=https://www.piwheels.org/simple" >> $1/etc/pip.conf
-    - mkdir -p $/etc/systemd/system/getty@tty1.service.d
+    - printf 'extra-index-url=https://www.piwheels.org/simple' >> "$1/etc/pip.conf"
+    - mkdir -p "$1/etc/systemd/system/getty@tty1.service.d"
     - printf '[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin %s --noclear %%I \\$TERM\n' "${IGconf_device_user1}"
       >> "$1/etc/systemd/system/getty@tty1.service.d/autologin.conf"
