@@ -1,7 +1,9 @@
 ---
 name: kiauh
 mmdebstrap:
+  variant: apt
   packages:
     - git
   customize-hooks:
-    - runuser -u "${IGconf_device_user1}" -- git clone --depth=1 https://github.com/dw-o/kiauh "$1/home/${IGconf_device_user1}/kiauh"
+    # Clone kiauh repository
+    - "runuser -u \"${IGconf_device_user1}\" -- git clone --depth=1 https://github.com/dw-o/kiauh \"$1/home/${IGconf_device_user1}/kiauh\""
