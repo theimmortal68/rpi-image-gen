@@ -49,6 +49,8 @@ mmdebstrap:
     # Link mainsail.cfg config file forcibly
     - ln -sf "$1/home/${IGconf_device_user1}/mainsail-config/mainsail.cfg" "$1/home/${IGconf_device_user1}/printer_data/config/mainsail.cfg"
 
+    # Fix ownership for user directories
+    - "chown -R ${IGconf_device_user1}:${IGconf_device_user1} $1/home/${IGconf_device_user1}"
 env:
   DOWNLOAD_URL: "https://github.com/mainsail-crew/mainsail/releases/latest/download/mainsail.zip"
   CONFIG_REPO: "https://github.com/mainsail-crew/mainsail-config.git"
