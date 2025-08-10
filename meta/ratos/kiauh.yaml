@@ -5,7 +5,9 @@ mmdebstrap:
   packages:
     - git
   customize-hooks:
+    # --- In-chroot: clone KIAUH (no fallback, no idempotence)
     - |
+      echo "[kiauh] clone repo"
       chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
         set -eu
         runuser -u "$IGUSER" -- git clone --depth=1 https://github.com/dw-0/kiauh "/home/$IGUSER/kiauh"
