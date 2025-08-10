@@ -1,0 +1,76 @@
+---
+name: mainsail
+env:
+  DOWNLOAD_URL: "https://github.com/mainsail-crew/mainsail/releases/latest/download/mainsail.zip"
+  CONFIG_REPO: "https://github.com/mainsail-crew/mainsail-config.git"
+packages:
+  - git
+  - nginx
+  - unzip
+customize-hooks:
+  # Remove default nginx site if it exists
+  - "rm -f \"$1/etc/nginx/sites-enabled/default\""
+
+  # Copy nginx configurations with safe directory creation
+  - "install -Dm 644 $RPI_TEMPLATES/etc-nginx-sites-available/mainsail \"$1/etc/nginx/sites-available/mainsail\""
+  - "install -Dm 644 $RPI_TEMPLATES/etc-nginx-conf.d/common_vars.conf \"$1/etc/nginx/conf.d/common_vars.conf\""
+  - "install -Dm 644 $RPI_TEMPLATES/etc-nginx-conf.d/upstreams.conf \"$1/etc/nginx/conf.d/upstreams.conf\""
+
+  # Enable mainsail site, check if symlink exists before creating
+  - |
+    if [ ! -L "$1/etc/nginx/sites-enabled/mainsail" ]; then
+      ln -s "$1/etc/nginx/sites-available/mainsail" "$1/etc/nginx/sites-enabled/mainsail"
+    else
+      echo "nginx mainsail site already enabled"
+    fi
+
+  # Modify logrotate cycle from 14d to 2d if not already done
+  - |
+    if ! grep -q 'rotate 2' "$1/etc/logrotate.d/nginx"; then
+      sed -i 's/rotate 14/rotate 2/' "$1/etc/logrotate.d/nginx"
+    fi
+
+  # Link log files safely, overwrite if exist
+  - "ln -sf \"$1/var/log/nginx/mainsail-access.log\" \"$1/home/${IGconf_device_user1}/printer_data/logs/mainsail-access.log\""
+  - "ln -sf \"$1/var/log/nginx/mainsail-error.log\" \"$1/home/${IGconf_device_user1}/printer_data/logs/mainsail-error.log\""
+
+  # Download mainsail zip only if missing
+  - |
+    if [ ! -f \"$1/home/${IGconf_device_user1}/mainsail.zip\" ]; then
+      runuser -u \"${IGconf_device_user1}\" -- wget -q --show-progress -O \"$1/home/${IGconf_device_user1}/mainsail.zip\" \"${DOWNLOAD_URL}\"
+    else
+      echo "Mainsail zip already downloaded"
+    fi
+
+  # Unzip mainsail if not already extracted
+  - |
+    if [ ! -d \"$1/home/${IGconf_device_user1}/mainsail\" ]; then
+      runuser -u \"${IGconf_device_user1}\" -- unzip \"$1/home/${IGconf_device_user1}/mainsail.zip\" -d \"$1/home/${IGconf_device_user1}/mainsail\"
+    else
+      echo "Mainsail already unzipped"
+    fi
+
+  # Remove zip after extraction to save space
+  - "rm -f \"$1/home/${IGconf_device_user1}/mainsail.zip\""
+
+  # Add user to www-data group if not already member
+  - |
+    if ! groups \"${IGconf_device_user1}\" | grep -qw www-data; then
+      gpasswd -a www-data \"${IGconf_device_user1}\"
+    else
+      echo \"User already in www-data group\"
+    fi
+
+  # Ensure user home directory has execute permission for group
+  - "chmod g+x \"$1/home/${IGconf_device_user1}\""
+
+  # Clone mainsail config repo if missing
+  - |
+    if [ ! -d \"$1/home/${IGconf_device_user1}/mainsail-config\" ]; then
+      runuser -u \"${IGconf_device_user1}\" -- git clone --depth=1 \"${CONFIG_REPO}\" \"$1/home/${IGconf_device_user1}/mainsail-config\"
+    else
+      echo \"Mainsail config repo already cloned\"
+    fi
+
+  # Link mainsail.cfg config file
+  - "ln -sf \"$1/home/${IGconf_device_user1}/mainsail-config/mainsail.cfg\" \"$1/home/${IGconf_device_user1}/printer_data/config/mainsail.cfg\""
