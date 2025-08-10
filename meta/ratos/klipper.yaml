@@ -39,3 +39,10 @@ customize-hooks:
             chown -R "${IGconf_device_user1}:${IGconf_device_user1}" "$1/home/${IGconf_device_user1}/${tmp}"
         fi
     done
+  - sudo -u "${IGconf_device_user1}" virtualenv -p python3 "${ENV_DIR}"
+  - sudo -u "${IGconf_device_user1}" "${ENV_DIR}"/bin/pip install -r "${SRC_DIR}"/scripts/klippy-requirements.txt
+  - sudo -u "${IGconf_device_user1}" "${ENV_DIR}"/bin/pip install "numpy"
+  - install -m 644 $RPI_TEMPLATES/etc-systemd-system/klipper.service $1/etc/systemd/system/
+  - install -m 644 $RPI_TEMPLATES/home-printer_data-systemd/klipper.env $1/home/${IGconf_device_user1}/printer_data/systemd/
+  - chown -R "${IGconf_device_user1}":"${IGconf_device_user1}" /home/"${IGconf_device_user1}"
+  - $BDEBSTRAP_HOOKS/enable-units "$1" klipper
