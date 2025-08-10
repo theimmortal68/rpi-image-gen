@@ -11,3 +11,4 @@ sys-apps/fake-hwclock
 net-misc/openssh-server
 ratos/ratos-base
 ratos/kiauh
+ratos/klipper
