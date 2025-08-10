@@ -1,0 +1,21 @@
+---
+name: ratos-base
+mmdebstrap: 
+  packages:
+    - avahi-daemon
+    - bash-completion
+    - iptables
+    - iproute2
+    - python3-pip
+    - python3-numpy
+    - python3-matplotlib
+    - python-is-python3
+    - uuid
+    - git
+    - libatlas3-base
+    - libatlas-base-dev
+    - libgfortran5
+    - unzip
+    - nodejs
+  customize-hooks:
+    - echo "extra-index-url=https://www.piwheels.org/simple" >> $1/etc/pip.conf
