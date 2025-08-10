@@ -1,0 +1,10 @@
+---
+name: net-mod
+mmdebstrap:
+  customize-hooks:
+    - install -m 644 $RPI_TEMPLATES/boot/firmware/headless_nm.txt.template $1/boot/firmware/
+    - install -m 644 $RPI_TEMPLATES/boot/firmware/WiFi-README.txt $1/boot/firmware/
+    - install -m 644 $RPI_TEMPLATES/etc/systemd/system/headless_nm.service $1/etc/systemd/system/
+    - install -m 755 $RPI_TEMPLATES/usr/local/bin/headless_nm $1/usr/local/bin/
+    - $BDEBSTRAP_HOOKS/enable-units "$1" headless_nm
+    - install -m 644 $RPI_TEMPLATES/etc/udev/rules.d/070-wifi-powersave.rules $1/etc/udev/rules.d/
