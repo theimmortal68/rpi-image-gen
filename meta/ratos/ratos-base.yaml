@@ -20,29 +20,28 @@ mmdebstrap:
     - nodejs
   customize-hooks:
     # Configure pip to use piwheels for faster ARM package installs
-    - "printf 'extra-index-url=https://www.piwheels.org/simple\n' >> \"$1/etc/pip.conf\""
+    - printf 'extra-index-url=https://www.piwheels.org/simple\n' >> $1/etc/pip.conf
 
     # Create systemd override directory for autologin
-    - "mkdir -p \"$1/etc/systemd/system/getty@tty1.service.d\""
+    - mkdir -p $1/etc/systemd/system/getty@tty1.service.d
 
     # Create autologin override file, using %s to safely substitute user
     - |
-      printf '[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin %s --noclear %%I \\$TERM\n' "${IGconf_device_user1}" \
-      >> "$1/etc/systemd/system/getty@tty1.service.d/autologin.conf"
+      printf '[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin %s --noclear %%I \$TERM\n' ${IGconf_device_user1} \
+      >> $1/etc/systemd/system/getty@tty1.service.d/autologin.conf
 
     # Install headless_nm service files (create parent dirs as needed)
-    - "install -Dm 644 \"$RPI_TEMPLATES/boot-firmware/headless_nm.txt.template\" \"$1/boot/firmware/headless_nm.txt.template\""
-    - "install -Dm 644 \"$RPI_TEMPLATES/boot-firmware/WiFi-README.txt\" \"$1/boot/firmware/WiFi-README.txt\""
-    - "install -Dm 644 \"$RPI_TEMPLATES/etc-systemd-system/headless_nm.service\" \"$1/etc/systemd/system/headless_nm.service\""
-    - "install -Dm 755 \"$RPI_TEMPLATES/usr-local-bin/headless_nm\" \"$1/usr/local/bin/headless_nm\""
+    - install -Dm 644 $RPI_TEMPLATES/boot-firmware/headless_nm.txt.template $1/boot/firmware/headless_nm.txt.template
+    - install -Dm 644 $RPI_TEMPLATES/boot-firmware/WiFi-README.txt $1/boot/firmware/WiFi-README.txt
+    - install -Dm 644 $RPI_TEMPLATES/etc-systemd-system/headless_nm.service $1/etc/systemd/system/headless_nm.service
+    - install -Dm 755 $RPI_TEMPLATES/usr-local-bin/headless_nm $1/usr/local/bin/headless_nm
 
     # Enable the unit (unambiguous quoting)
-    - |
-      "$BDEBSTRAP_HOOKS/enable-units" "$1" headless_nm
+    - $BDEBSTRAP_HOOKS/enable-units $1 headless_nm
 
     # Ensure udev rules dir exists and copy wifi-powersave rules
-    - "mkdir -p \"$1/etc/udev/rules.d\""
-    - "install -Dm 644 \"$RPI_TEMPLATES/etc-udev-rules.d/070-wifi-powersave.rules\" \"$1/etc/udev/rules.d/070-wifi-powersave.rules\""
+    - mkdir -p $1/etc/udev/rules.d
+    - install -Dm 644 $RPI_TEMPLATES/etc-udev-rules.d/070-wifi-powersave.rules $1/etc/udev/rules.d/070-wifi-powersave.rules
 
-    # Fix ownership for user directories — wrapped
-    - sh -c "chroot \$1 sh -c 'chown -R pi:pi /home/pi'"
+    # Fix ownership for user directories — wrapped properly
+    - sh -c 'chroot "$1" sh -c "chown -R pi:pi /home/pi"' sh "$1"
