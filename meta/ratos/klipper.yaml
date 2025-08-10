@@ -36,7 +36,7 @@ customize-hooks:
 
   # Clone Kalico "Klipper" github
   - runuser -u "${IGconf_device_user1}" -- git clone --depth=1 --branch "${BRANCH}" "${REPO}" "${SRC_DIR}"
-  
+
   # Create printer_data subdirectories if missing
   - |
     for dir in ${PRINTER_DATA_DIRS}; do
@@ -65,5 +65,5 @@ customize-hooks:
   # Fix ownership recursively on home directory
   - "chown -R ${IGconf_device_user1}:${IGconf_device_user1} $1/home/${IGconf_device_user1}"
 
-  # Enable klipper service
-  - "$BDEBSTRAP_HOOKS/enable-units "$1" klipper"
+  # Enable klipper service (fix quoting)
+  - "\"$BDEBSTRAP_HOOKS/enable-units\" \"$1\" klipper"
