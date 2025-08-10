@@ -7,4 +7,3 @@ mmdebstrap:
     - "install -Dm 644 $RPI_TEMPLATES/etc-systemd-system/headless_nm.service $1/etc/systemd/system/headless_nm.service"
     - "install -Dm 755 $RPI_TEMPLATES/usr-local-bin/headless_nm $1/usr/local/bin/headless_nm"
     - "$BDEBSTRAP_HOOKS/enable-units \"$1\" headless_nm"
-    - "install -Dm 644 $RPI_TEMPLATES/etc-udev-rules.d/070-wifi-powersave.rules $1/etc/udev/rules.d/070-wifi-powersave.rules"
