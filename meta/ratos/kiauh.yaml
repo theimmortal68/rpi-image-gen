@@ -4,9 +4,17 @@ mmdebstrap:
   variant: apt
   packages:
     - git
+    - ca-certificates
   customize-hooks:
-    # Clone kiauh repository inside chroot as the target user
-    - chroot "$1" runuser -u ${IGconf_device_user1} -- git clone --depth=1 https://github.com/dw-o/kiauh /home/${IGconf_device_user1}/kiauh
+    # Ensure DNS/HTTPS work inside chroot for the clone
+    - test -s "$1/etc/resolv.conf" || cp -L /etc/resolv.conf "$1/etc/resolv.conf"
+    - chroot "$1" sh -lc 'update-ca-certificates || true'
 
-    # Fix ownership for the target user's home directory
-    - chroot "$1" chown -R ${IGconf_device_user1}:${IGconf_device_user1} /home/${IGconf_device_user1}
+    # Always clone KIAUH as the target user (no chown, no fallback, no idempotence)
+    - |
+      chroot "$1" sh -lc '
+        set -eu
+        export GIT_TERMINAL_PROMPT=0
+        export GIT_ASKPASS=/bin/true
+        runuser -u "${IGconf_device_user1}" -- git clone --depth=1 https://github.com/dw-o/kiauh "/home/${IGconf_device_user1}/kiauh"
+      '
