@@ -45,4 +45,5 @@ mmdebstrap:
     - "install -Dm 644 \"$RPI_TEMPLATES/etc-udev-rules.d/070-wifi-powersave.rules\" \"$1/etc/udev/rules.d/070-wifi-powersave.rules\""
 
     # Fix ownership for user directories
-    - chroot "$1" "chown -R ${IGconf_device_user1}:${IGconf_device_user1} $1/home/${IGconf_device_user1}"
+    - chroot "$1" chown -R pi:pi /home/pi
+
