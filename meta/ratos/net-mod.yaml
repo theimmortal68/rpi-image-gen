@@ -3,7 +3,4 @@ name: net-mod
 mmdebstrap:
   customize-hooks:
     - "install -Dm 644 $RPI_TEMPLATES/boot-firmware/headless_nm.txt.template $1/boot/firmware/headless_nm.txt.template"
-    - "install -Dm 644 $RPI_TEMPLATES/boot-firmware/WiFi-README.txt $1/boot/firmware/WiFi-README.txt"
-    - "install -Dm 644 $RPI_TEMPLATES/etc-systemd-system/headless_nm.service $1/etc/systemd/system/headless_nm.service"
-    - "install -Dm 755 $RPI_TEMPLATES/usr-local-bin/headless_nm $1/usr/local/bin/headless_nm"
-    - "$BDEBSTRAP_HOOKS/enable-units \"$1\" headless_nm"
+
