@@ -6,15 +6,4 @@ mmdebstrap:
     - git
     - ca-certificates
   customize-hooks:
-    # Ensure DNS/HTTPS work inside chroot for the clone
-    - test -s "$1/etc/resolv.conf" || cp -L /etc/resolv.conf "$1/etc/resolv.conf"
-    - chroot "$1" sh -lc 'update-ca-certificates || true'
-
-    # Always clone KIAUH as the target user (no chown, no fallback, no idempotence)
-    - |
-      chroot "$1" sh -lc '
-        set -eu
-        export GIT_TERMINAL_PROMPT=0
-        export GIT_ASKPASS=/bin/true
-        runuser -u "${IGconf_device_user1}" -- git clone --depth=1 https://github.com/dw-o/kiauh "/home/${IGconf_device_user1}/kiauh"
-      '
+    - runuser -u "${IGconf_device_user1}" -- git clone --depth=1 https://github.com/dw-0/kiauh "/home/${IGconf_device_user1}/kiauh"
