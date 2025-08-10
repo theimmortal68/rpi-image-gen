@@ -6,6 +6,7 @@ mmdebstrap:
     - git
   customize-hooks:
     # Clone kiauh repository wrapped properly
-    - sh -c 'chroot "$1" sh -c "runuser -u \"${IGconf_device_user1}\" -- git clone --depth=1 https://github.com/dw-o/kiauh \"$1/home/${IGconf_device_user1}/kiauh\"" 
+    - sh -c 'chroot "$1" sh -c "runuser -u ${IGconf_device_user1} -- git clone --depth=1 https://github.com/dw-o/kiauh $1/home/${IGconf_device_user1}/kiauh"' sh "$1"
+
     # Fix ownership for user directories wrapped properly
-    - sh -c 'chroot "$1" sh -c "chown -R pi:pi /home/pi"'
+    - sh -c 'chroot "$1" sh -c "chown -R pi:pi /home/pi"' sh "$1"
