@@ -1,0 +1,41 @@
+---
+name: klipper
+env:
+  SRC_DIR="$1/home/${IGconf_device_user1}/klipper"
+  ENV_DIR="$1/home/${IGconf_device_user1}/klippy-env"
+  REPO="https://github.com/Klipper3d/klipper.git"
+  PRINTER_DATA_DIRS="printer_data printer_data/config printer_data/comms printer_data/logs printer_data/systemd"
+packages:
+  - git
+  - virtualenv
+  - python3-dev
+  - libffi-dev
+  - build-essential
+  - libncurses-dev
+  - pkg-config
+  - libusb-dev
+  - libusb-1.0-0-dev
+  - avrdude
+  - gcc-avr
+  - binutils-avr
+  - avr-libc
+  - stm32flash
+  - dfu-util
+  - libnewlib-arm-none-eabi
+  - gcc-arm-none-eabi
+  - binutils-arm-none-eabi
+  - libusb-1.0-0
+  - python3-numpy
+  - python3-matplotlib
+  - libatlas-base-dev
+  - libopenblas-dev
+customize-hooks:
+  - usermod -a -G "tty,dialout" "${IGconf_device_user1}"
+  - sudo -u "${IGconf_device_user1}" git clone ${REPO} "$1/home/${IGconf_device_user1}/klipper"
+  - for tmp in ${PRINTER_DATA_DIRS}; do
+        if [[ ! -d "$1/home/${IGconf_device_user1}/${tmp}" ]]; then
+            echo "Creating ${tmp}"
+            mkdir -p "$1/home/${IGconf_device_user1}/${tmp}"
+            chown -R "${IGconf_device_user1}:${IGconf_device_user1}" "$1/home/${IGconf_device_user1}/${tmp}"
+        fi
+    done
