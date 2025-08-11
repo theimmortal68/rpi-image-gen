@@ -3,6 +3,7 @@ name: crowsnest
 mmdebstrap:
   variant: apt
   packages:
+    - bash
     - git
     - crudini
     - bsdutils
@@ -27,7 +28,7 @@ mmdebstrap:
     # --- In-chroot: clone repo as target user
     - |
       echo "[crowsnest] clone repo"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" REPO="https://github.com/mainsail-crew/crowsnest.git" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" REPO="https://github.com/mainsail-crew/crowsnest.git" bash -lc '
         set -eu
         runuser -u "$IGUSER" -- git clone --depth=1 "$REPO" "/home/$IGUSER/crowsnest"
       '
@@ -35,21 +36,20 @@ mmdebstrap:
     # --- In-chroot: inject a shim that overrides risky steps when flags are set
     - |
       echo "[crowsnest] write injected_chroot_shim.sh"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
-        cat > "/home/$IGUSER/crowsnest/tools/injected_chroot_shim.sh" <<"SHIM_EOF"
+        cat > "/home/$IGUSER/crowsnest/tools/injected_chroot_shim.sh" <<'\''SHIM_EOF'\''
         # Sourced after libs in tools/install.sh; makes installer chroot-friendly.
         : "${CROWSNEST_SKIP_APT_UPDATE:=0}"
         : "${CROWSNEST_SKIP_DEP_INSTALL:=0}"
         : "${CROWSNEST_NO_ENABLE:=0}"
         : "${CROWSNEST_DEBUG:=0}"
 
-        # Optional: rich bash xtrace when CROWSNEST_DEBUG=1
+        # Optional: rich bash xtrace when CROWSNEST_DEBUG=1 (only active under bash)
         if [ "$CROWSNEST_DEBUG" = "1" ] ; then
           export PS4='+ ${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-          # send xtrace to FD 9 if available, else stderr
           if [ -n "${BASH_VERSINFO:-}" ] && [ -w /proc/$$/fd/9 ] 2>/dev/null; then
-          export BASH_XTRACEFD=9
+            export BASH_XTRACEFD=9
           fi
           set -x
         fi
@@ -76,7 +76,7 @@ mmdebstrap:
     # --- In-chroot: sed-insert a single source line to load the shim (minimal)
     - |
       echo "[crowsnest] patch install.sh to source shim (minimal)"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         f="/home/$IGUSER/crowsnest/tools/install.sh"
         # Insert right after the last lib source (libs/update_manager.sh)
@@ -86,15 +86,15 @@ mmdebstrap:
     # --- In-chroot: create log dir for debug output
     - |
       echo "[crowsnest] create log dir"
-      chroot "$1" sh -lc '
+      chroot "$1" bash -lc '
         set -eu
         install -d -m 0755 /var/log/crowsnest
       '
 
-    # --- In-chroot: lean APT config + warm-up with extra debug (mitigates mem spikes)
+    # --- In-chroot: lean APT config + warm-up (mitigates mem spikes)
     - |
-      echo "[crowsnest] prep lean apt config + warm-up (debug)"
-      chroot "$1" sh -lc '
+      echo "[crowsnest] prep lean apt config + warm-up"
+      chroot "$1" bash -lc '
         set -eu
         cat >/etc/apt/apt.conf.d/99lean <<EOF
         Acquire::Languages "none";
@@ -102,36 +102,19 @@ mmdebstrap:
         Acquire::CompressionTypes::Order:: "gz";
         Acquire::PDiffs "false";
         APT::Sandbox::User "root";
-        # Debug knobs (safe to leave; just makes logs chatty)
-        Debug::pkgProblemResolver "1";
-        Debug::Acquire::http "true";
-        Acquire::Retries "3";
         EOF
         export DEBIAN_FRONTEND=noninteractive
         rm -rf /var/lib/apt/lists/* || true
-        # warm-up update with explicit debug and consistent options
-        if ! apt-get \
-            -o Acquire::Languages=none \
-            -o Acquire::CompressionTypes::Order::=gz \
-            -o Acquire::PDiffs=false \
-            -o Debug::pkgProblemResolver=1 \
-            -o Acquire::Retries=3 \
-            update; then
+        if ! apt-get -o Acquire::Languages=none -o Acquire::CompressionTypes::Order::=gz -o Acquire::PDiffs=false update; then
           echo "[crowsnest] apt-get update failed; retrying in 5s..." >&2
           sleep 5
-          apt-get \
-            -o Acquire::Languages=none \
-            -o Acquire::CompressionTypes::Order::=gz \
-            -o Acquire::PDiffs=false \
-            -o Debug::pkgProblemResolver=1 \
-            -o Acquire::Retries=3 \
-            update
+          apt-get -o Acquire::Languages=none -o Acquire::CompressionTypes::Order::=gz -o Acquire::PDiffs=false update
         fi
       '
 
-    # --- In-chroot: build and run installer with skip flags + FULL DEBUG LOGGING
+    # --- In-chroot: build and run installer with skip flags
     - |
-      echo "[crowsnest] make install (skip apt/deps, no systemctl, debug log)"
+      echo "[crowsnest] make install (skip apt/deps, no systemctl)"
       chroot "$1" env \
         DEBIAN_FRONTEND=noninteractive \
         BASE_USER="${IGconf_device_user1}" \
@@ -139,31 +122,12 @@ mmdebstrap:
         CROWSNEST_SKIP_APT_UPDATE=1 \
         CROWSNEST_SKIP_DEP_INSTALL=1 \
         CROWSNEST_NO_ENABLE=1 \
-        CROWSNEST_DEBUG=1 \
         NO_SYSTEMCTL=1 \
-        sh -lc '
+        bash -lc '
           set -eu
           cd "/home/'"${IGconf_device_user1}"'/crowsnest"
-
-          # Route all stdout/stderr through tee -> /var/log/crowsnest/install.log
-          # Also open FD 9 for bash xtrace (BASH_XTRACEFD) so xtrace is readable.
-          {
-            exec 9>>/var/log/crowsnest/install.log
-            export PS4="+ \${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: "
-            export BASH_XTRACEFD=9
-            set -x
-
-            echo "=== ENV SNAPSHOT ==="
-            env | sort
-            echo "=== SHELL ==="
-            bash --version 2>/dev/null || true
-            echo "=== MAKE (build) ==="
-            make PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1
-
-            echo "=== INSTALLER START ==="
-            ./tools/install.sh
-            echo "=== INSTALLER END ==="
-          } 2>&1 | tee -a /var/log/crowsnest/install.log
+          make PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1
+          ./tools/install.sh
         '
 
     # --- Host-side: enable crowsnest service (avoid systemctl inside chroot)
