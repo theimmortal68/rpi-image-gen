@@ -1,0 +1,29 @@
+---
+name: postinstall
+mmdebstrap:
+  variant: apt
+  customize-hooks:
+    # --- In-chroot: stop RatOS Configurator if running (final cleanup)
+    - |
+      echo "[postinstall] stop RatOS Configurator if running"
+      chroot "$1" sh -lc '
+        set -e
+        if [ -f /tmp/ratos_configurator.pid ]; then
+          pid="$(cat /tmp/ratos_configurator.pid || true)"
+          if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+            echo "Stopping configurator (pid: $pid)"
+            kill "$pid" || true
+            # Grace period, then force if needed
+            for i in $(seq 1 10); do
+              kill -0 "$pid" 2>/dev/null || break
+              sleep 0.5
+            done
+            kill -9 "$pid" 2>/dev/null || true
+          else
+            echo "PID file present but process not running"
+          fi
+          rm -f /tmp/ratos_configurator.pid
+        else
+          echo "No PID file; nothing to stop"
+        fi
+      '
