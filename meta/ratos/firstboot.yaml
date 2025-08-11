@@ -1,1 +1,99 @@
+---
+name: firstboot
+mmdebstrap:
+  variant: apt
+  packages:
+    - bash
 
+  customize-hooks:
+    # --- Host-side: install first-boot flash script
+    - |
+      echo "[klipper-mcu-firstboot] install flash script"
+      set -euxo pipefail
+      IGUSER="${IGconf_device_user1}"
+      install -d -m 0755 "$1/usr/local/sbin"
+      cat > "$1/usr/local/sbin/flash-klipper-mcu-firstboot" <<'EOF'
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        IGUSER="__IGUSER__"
+        BOARD="r${IGUSER}"
+        KDIR="/home/${IGUSER}/klipper"
+        CFG_SRC="/home/${IGUSER}/printer_data/config/RatOS/boards/${BOARD}/firmware.config"
+        STAMP="/var/lib/firstboot/flash-klipper-mcu.done"
+        LOGTAG="[flash-klipper-mcu]"
+
+        echo "${LOGTAG} starting..."
+
+        # If already done, exit quickly (unit also guards with ConditionPathExists)
+        if [ -f "${STAMP}" ]; then
+          echo "${LOGTAG} already flashed; exiting."
+          exit 0
+        fi
+
+        # Wait for udev to settle so USB/DFU devices are present
+        udevadm settle || true
+        sleep 2
+
+        # Sanity checks
+        if [ ! -d "${KDIR}" ]; then
+          echo "${LOGTAG} ${KDIR} not found; skipping."
+          exit 0
+        fi
+        if [ ! -f "${CFG_SRC}" ]; then
+          echo "${LOGTAG} ${CFG_SRC} not found; skipping."
+          exit 0
+        fi
+
+        # Ensure ownership so user builds don’t trip on perms
+        chown -R "${IGUSER}:${IGUSER}" "${KDIR}"
+
+        # Build as the target user
+        runuser -u "${IGUSER}" -- bash -lc "
+          set -euo pipefail
+          cd '${KDIR}'
+          cp -f '${CFG_SRC}' .config
+          make clean
+          make olddefconfig
+          make -j\"\$(nproc)\"
+        "
+
+        # Flash as root (often needs raw device access)
+        cd "${KDIR}"
+        make flash
+
+        # Mark done so we don’t run again
+        install -d -m 0755 /var/lib/firstboot
+        touch "${STAMP}"
+        echo "${LOGTAG} flash complete."
+        EOF
+      # bake in the target user at build time
+      sed -i "s/__IGUSER__/${IGUSER//\//\\/}/g" "$1/usr/local/sbin/flash-klipper-mcu-firstboot"
+      chmod 0755 "$1/usr/local/sbin/flash-klipper-mcu-firstboot"
+
+    # --- Host-side: install systemd unit (runs once, at first boot)
+    - |
+      echo "[klipper-mcu-firstboot] install systemd unit"
+      set -euxo pipefail
+      install -d -m 0755 "$1/etc/systemd/system" "$1/var/lib/firstboot"
+      cat > "$1/etc/systemd/system/flash-klipper-mcu-firstboot.service" <<'EOF'
+        [Unit]
+        Description=Flash Klipper MCU firmware on first boot
+        After=network-online.target
+        Wants=network-online.target
+        ConditionPathExists=!/var/lib/firstboot/flash-klipper-mcu.done
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/local/sbin/flash-klipper-mcu-firstboot
+        RemainAfterExit=no
+        TimeoutStartSec=600
+
+        [Install]
+        WantedBy=multi-user.target
+        EOF
+
+    # --- Host-side: enable the unit (avoid systemctl in chroot)
+    - |
+      echo "[klipper-mcu-firstboot] enable unit"
+      $BDEBSTRAP_HOOKS/enable-units "$1" flash-klipper-mcu-firstboot
