@@ -49,15 +49,6 @@ mmdebstrap:
 
           # Create variant marker
           echo "${DIST_NAME,,}" > "/etc/${DIST_NAME,,}-variant"
-
-          # MOTD banner
-          cat <<EOF > /etc/motd
-   ____       _   ____   _____
-  |  _ \\ __ _| |_|  _ \\ / ____|
-  | |_) / _\` | __| |_) | (___
-  |  _ < (_| | |_|  _ < \\___ \\
-  |_| \\_\\__,_|\\__|_| \\_\\____/
-EOF
         '
 
     # --- In-chroot: set Git default for the target user
