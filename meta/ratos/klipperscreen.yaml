@@ -1,0 +1,65 @@
+---
+name: klipperscreen
+mmdebstrap:
+  variant: apt
+  packages:
+    - bash
+    - git
+
+  customize-hooks:
+    # --- In-chroot: allow root on X11 (append; may duplicate on repeated runs)
+    - |
+      echo "[klipperscreen] allow root for X11"
+      chroot "$1" bash -lc '
+        set -euxo pipefail
+        install -d -m 0755 /etc/X11
+        touch /etc/X11/Xwrapper.config
+        echo needs_root_rights=yes >> /etc/X11/Xwrapper.config
+      '
+
+    # --- In-chroot: clone KlipperScreen as the target user
+    - |
+      echo "[klipperscreen] clone repo"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
+        set -euxo pipefail
+        runuser -u "$IGUSER" -- git clone --depth=1 -b master https://github.com/jordanruthe/KlipperScreen.git "/home/$IGUSER/KlipperScreen"
+      '
+
+    # --- In-chroot: run installer as the user, but neuter systemctl during install
+    - |
+      echo "[klipperscreen] install (shim systemctl to avoid service operations)"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
+        set -euxo pipefail
+
+        # Create a temporary systemctl shim earlier in PATH so installer cannot start/enable services
+        install -d -m 0755 /usr/local/bin
+        cat >/usr/local/bin/systemctl <<EOF
+        #!/bin/sh
+        # chroot-safe systemctl shim: no-ops during image build
+        exit 0
+        EOF
+        chmod 0755 /usr/local/bin/systemctl
+
+        # Run installer as the target user
+        cd "/home/$IGUSER/KlipperScreen"
+        runuser -u "$IGUSER" -- env NETWORK="skipnetworkmanagerinstall" ./scripts/KlipperScreen-install.sh
+
+        # Remove the shim to avoid affecting later steps
+        rm -f /usr/local/bin/systemctl
+      '
+
+    # --- In-chroot: mute service output in unit file (add StandardOutput/StandardError)
+    - |
+      echo "[klipperscreen] mute unit logging"
+      chroot "$1" bash -lc '
+        set -euxo pipefail
+        svc="/etc/systemd/system/KlipperScreen.service"
+        if [ -f "$svc" ]; then
+          # Insert directives after the first [Service] header
+          sed -i "0,/^\[Service\]/s//[Service]\nStandardOutput=null\nStandardError=null/" "$svc"
+        fi
+      '
+
+    - |
+      echo "[klipperscreen] enable service"
+      $BDEBSTRAP_HOOKS/enable-units "$1" KlipperScreen
