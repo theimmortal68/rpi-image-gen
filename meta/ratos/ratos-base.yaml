@@ -2,7 +2,6 @@
 name: ratos-base
 mmdebstrap:
   variant: apt
-
   packages:
     - avahi-daemon
     - bash-completion
@@ -19,10 +18,10 @@ mmdebstrap:
     - libgfortran5
     - unzip
     - curl
-    - gnupg    # needed for gpg --dearmor inside chroot
-
+    - gnupg
+    - ca-certificates
   customize-hooks:
-    # --- In-chroot: write /etc/pip.conf
+    # --- In-chroot: write pip.conf
     - |
       echo "[ratos-base] write /etc/pip.conf"
       chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
@@ -31,97 +30,28 @@ mmdebstrap:
           "[global]" \
           "index-url = https://www.piwheels.org/simple" \
           "extra-index-url = https://pypi.org/simple" \
-          > /etc/pip.conf
-      '
+          > /etc/pip.conf'
 
     # --- In-chroot: create systemd override dir
     - |
       echo "[ratos-base] mkdir getty override dir"
       chroot "$1" sh -lc '
         set -eu
-        mkdir -p /etc/systemd/system/getty@tty1.service.d
-      '
+        mkdir -p /etc/systemd/system/getty@tty1.service.d'
 
     # --- In-chroot: write autologin.conf via single-quoted heredoc
     - |
       echo "[ratos-base] write autologin.conf (heredoc)"
       chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
         set -eu
-        cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<'\''EOF'\''
+        cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<'\'EOF\'' 
         [Service]
         ExecStart=
         ExecStart=-/sbin/agetty --autologin '"$IGUSER"' --noclear %I \$TERM
-        EOF
-      '
+        EOF'
 
-    # --- In-chroot: setup NodeSource LTS repo, install nodejs + pnpm
+    # --- In-chroot: setup NodeSource LTS via script, install nodejs + pnpm
     - |
-      echo "[ratos-base] setup NodeSource LTS, install nodejs + pnpm"
+      echo "[ratos-base] setup NodeSource LTS via script, install nodejs + pnpm"
       chroot "$1" sh -lc '
         set -eu
-        # resolve codename
-        CODENAME="bookworm"
-        if [ -f /etc/os-release ]; then
-          . /etc/os-release || true
-          CODENAME="${VERSION_CODENAME:-$CODENAME}"
-        fi
-
-        # prepare keyring + repo
-        install -d -m 0755 /etc/apt/keyrings /etc/apt/sources.list.d
-        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
-          | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-        chmod 0644 /etc/apt/keyrings/nodesource.gpg
-        echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x $CODENAME main" \
-          > /etc/apt/sources.list.d/nodesource.list
-
-        # install nodejs (LTS) and pnpm via npm
-        DEBIAN_FRONTEND=noninteractive apt-get update
-        DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
-        # ensure /tmp usable for npm if needed
-        [ -d /tmp ] || mkdir /tmp; chmod 777 /tmp
-        npm install -g pnpm
-        command -v pnpm >/dev/null 2>&1 || { echo "pnpm not found after installation" >&2; exit 1; }
-      '
-
-    # --- In-chroot: Input Shaper requirements (APT + venv pip)
-    - |
-      echo "[ratos-base] Input Shaper requirements"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
-        set -eu
-        : "${IS_REQ_PREINSTALL_VENV_DIR:=/home/$IGUSER/klippy-env}"
-        : "${IS_REQ_PREINSTALL_DEPS:=python3-numpy python3-matplotlib libatlas3-base libatlas-base-dev libgfortran5}"
-        : "${IS_REQ_PREINSTALL_PIP:=numpy}"
-
-        echo "Installing Input Shaper APT deps: $IS_REQ_PREINSTALL_DEPS"
-        DEBIAN_FRONTEND=noninteractive apt-get update
-        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $IS_REQ_PREINSTALL_DEPS
-
-        echo "Checking for Klipper venv at: $IS_REQ_PREINSTALL_VENV_DIR"
-        if [ -d "$IS_REQ_PREINSTALL_VENV_DIR" ] && [ -x "$IS_REQ_PREINSTALL_VENV_DIR/bin/pip" ]; then
-          echo "Installing $IS_REQ_PREINSTALL_PIP into venv..."
-          runuser -u "$IGUSER" -- "$IS_REQ_PREINSTALL_VENV_DIR/bin/pip" install -v "$IS_REQ_PREINSTALL_PIP"
-        else
-          echo "Klipper venv not found; skipping venv pip install."
-        fi
-
-        echo "Cleaning user cache..."
-        runuser -u "$IGUSER" -- rm -rf "/home/$IGUSER/.cache" || true
-      '
-
-    # --- Host-side: copy headless_nm bits and enable
-    - |
-      echo "[ratos-base] install headless_nm.txt.template"
-      install -Dm 644 "$RPI_TEMPLATES/boot-firmware/headless_nm.txt.template" "$1/boot/firmware/headless_nm.txt.template"
-    - |
-      echo "[ratos-base] install WiFi-README.txt"
-      install -Dm 644 "$RPI_TEMPLATES/boot-firmware/WiFi-README.txt" "$1/boot/firmware/WiFi-README.txt"
-    - |
-      echo "[ratos-base] install headless_nm.service"
-      install -Dm 644 "$RPI_TEMPLATES/etc-systemd-system/headless_nm.service" "$1/etc/systemd/system/headless_nm.service"
-    - |
-      echo "[ratos-base] install /usr/local/bin/headless_nm"
-      install -Dm 755 "$RPI_TEMPLATES/usr-local-bin/headless_nm" "$1/usr/local/bin/headless_nm"
-    - |
-      echo "[ratos-base] install 070-wifi-powersave.rules"
-      install -Dm 644 "$RPI_TEMPLATES/etc-udev-rules.d/070-wifi-powersave.rules" "$1/etc/udev/rules.d/070-wifi-powersave.rules"
-    - $BDEBSTRAP_HOOKS/enable-units "$1" headless_nm
