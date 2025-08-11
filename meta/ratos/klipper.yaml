@@ -45,17 +45,16 @@ mmdebstrap:
           set -eu
           runuser -u "$IGUSER" -- git clone --depth=1 --branch "$BRANCH" "$REPO" "/home/$IGUSER/klipper"'
 
-    # --- In-chroot: create printer_data (fail if exists; no -p)
+    # --- In-chroot: create printer_data (fail if exists; no -p) as the user
     - |
-      echo "[klipper] mkdir printer_data tree"
+      echo "[klipper] mkdir printer_data tree (as user)"
       chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
         set -eu
-        base="/home/$IGUSER/printer_data"
-        mkdir "$base"
-        mkdir "$base/config"
-        mkdir "$base/comms"
-        mkdir "$base/logs"
-        mkdir "$base/systemd"'
+        runuser -u "$IGUSER" -- mkdir "/home/$IGUSER/printer_data"
+        runuser -u "$IGUSER" -- mkdir "/home/$IGUSER/printer_data/config"
+        runuser -u "$IGUSER" -- mkdir "/home/$IGUSER/printer_data/comms"
+        runuser -u "$IGUSER" -- mkdir "/home/$IGUSER/printer_data/logs"
+        runuser -u "$IGUSER" -- mkdir "/home/$IGUSER/printer_data/systemd'
 
     # --- In-chroot: create virtualenv (no idempotence)
     - |
