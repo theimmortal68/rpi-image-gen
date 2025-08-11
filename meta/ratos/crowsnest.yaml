@@ -32,61 +32,106 @@ mmdebstrap:
         runuser -u "$IGUSER" -- git clone --depth=1 "$REPO" "/home/$IGUSER/crowsnest"
       '
 
-    # --- In-chroot: sed-inject patches into tools/install.sh (no full overwrite)
+    # --- In-chroot: inject a shim that overrides risky steps when flags are set
     - |
-      echo "[crowsnest] patch install.sh via sed"
+      echo "[crowsnest] write injected_chroot_shim.sh"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        cat > "/home/$IGUSER/crowsnest/tools/injected_chroot_shim.sh" <<"SHIM_EOF"
+# Sourced after libs in tools/install.sh; makes installer chroot-friendly.
+: "${CROWSNEST_SKIP_APT_UPDATE:=0}"
+: "${CROWSNEST_SKIP_DEP_INSTALL:=0}"
+: "${CROWSNEST_NO_ENABLE:=0}"
+: "${CROWSNEST_DEBUG:=0}"
+
+# Optional: rich bash xtrace when CROWSNEST_DEBUG=1
+if [ "$CROWSNEST_DEBUG" = "1" ] ; then
+  export PS4='+ ${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
+  # send xtrace to FD 9 if available, else stderr
+  if [ -n "${BASH_VERSINFO:-}" ] && [ -w /proc/$$/fd/9 ] 2>/dev/null; then
+    export BASH_XTRACEFD=9
+  fi
+  set -x
+fi
+
+if [ "$CROWSNEST_SKIP_APT_UPDATE" = "1" ]; then
+  run_apt_update() { return 0; }
+fi
+
+if [ "$CROWSNEST_SKIP_DEP_INSTALL" = "1" ]; then
+  shallow_cs_dependencies_check() { return 1; } # choose generic path
+  link_pkglist_rpi() { :; }
+  link_pkglist_generic() { :; }
+  source_pkglist_file() { :; }
+  install_dependencies() { return 0; }
+fi
+
+if [ "$CROWSNEST_NO_ENABLE" = "1" ]; then
+  enable_service() { return 0; }
+fi
+SHIM_EOF
+        chmod 0644 "/home/$IGUSER/crowsnest/tools/injected_chroot_shim.sh"
+      '
+
+    # --- In-chroot: sed-insert a single source line to load the shim (minimal)
+    - |
+      echo "[crowsnest] patch install.sh to source shim (minimal)"
       chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
         set -eu
         f="/home/$IGUSER/crowsnest/tools/install.sh"
-
-        # 1) Add skip flag defaults right after the existing CROWSNEST_UNATTENDED default
-        sed -i "/CROWSNEST_UNATTENDED[^\n]*\"0\"/a : \"\${CROWSNEST_SKIP_APT_UPDATE:=0}\"\n: \"\${CROWSNEST_SKIP_DEP_INSTALL:=0}\"\n: \"\${CROWSNEST_NO_ENABLE:=0}\"" "$f"
-
-        # 2) Allow running as root when unattended (chroot builds)
-        sed -i "s/if \[\[ \"\${SUDO_USER}\" = \"root\" \]\]; then/if [[ \"\${SUDO_USER}\" = \"root\" && \"\${CROWSNEST_UNATTENDED}\" != \"1\" ]]; then/" "$f"
-
-        # 3) After sourcing libs, inject function overrides honoring skip flags
-        sed -i "/libs\/update_manager.sh\"/a \
-        # -- injected: skip hooks for chroot builds --\\n\
-        if [ \"\${CROWSNEST_SKIP_APT_UPDATE:-0}\" = \"1\" ]; then\\n\
-          run_apt_update() { return 0; }\\n\
-        fi\\n\
-        if [ \"\${CROWSNEST_SKIP_DEP_INSTALL:-0}\" = \"1\" ]; then\\n\
-          shallow_cs_dependencies_check() { return 1; }\\n\
-          link_pkglist_rpi() { :; }\\n\
-          link_pkglist_generic() { :; }\\n\
-          source_pkglist_file() { :; }\\n\
-          install_dependencies() { return 0; }\\n\
-        fi\\n\
-        if [ \"\${CROWSNEST_NO_ENABLE:-0}\" = \"1\" ]; then\\n\
-          enable_service() { return 0; }\\n\
-        fi" "$f"
+        # Insert right after the last lib source (libs/update_manager.sh)
+        sed -i "/libs\/update_manager\.sh\"/a \ \ . \"\${SRC_DIR}\/injected_chroot_shim.sh\"" "$f"
       '
 
-    # --- In-chroot: lean APT config + warm-up (mitigates memory spikes)
+    # --- In-chroot: create log dir for debug output
     - |
-      echo "[crowsnest] prep lean apt config + warm-up"
+      echo "[crowsnest] create log dir"
+      chroot "$1" sh -lc '
+        set -eu
+        install -d -m 0755 /var/log/crowsnest
+      '
+
+    # --- In-chroot: lean APT config + warm-up with extra debug (mitigates mem spikes)
+    - |
+      echo "[crowsnest] prep lean apt config + warm-up (debug)"
       chroot "$1" sh -lc '
         set -eu
         cat >/etc/apt/apt.conf.d/99lean <<EOF
-          Acquire::Languages "none";
-          Acquire::GzipIndexes "true";
-          Acquire::CompressionTypes::Order:: "gz";
-          Acquire::PDiffs "false";
-          APT::Sandbox::User "root";
-        EOF
+Acquire::Languages "none";
+Acquire::GzipIndexes "true";
+Acquire::CompressionTypes::Order:: "gz";
+Acquire::PDiffs "false";
+APT::Sandbox::User "root";
+# Debug knobs (safe to leave; just makes logs chatty)
+Debug::pkgProblemResolver "1";
+Debug::Acquire::http "true";
+Acquire::Retries "3";
+EOF
         export DEBIAN_FRONTEND=noninteractive
         rm -rf /var/lib/apt/lists/* || true
-        if ! apt-get -o Acquire::Languages=none -o Acquire::CompressionTypes::Order::=gz -o Acquire::PDiffs=false update; then
+        # warm-up update with explicit debug and consistent options
+        if ! apt-get \
+            -o Acquire::Languages=none \
+            -o Acquire::CompressionTypes::Order::=gz \
+            -o Acquire::PDiffs=false \
+            -o Debug::pkgProblemResolver=1 \
+            -o Acquire::Retries=3 \
+            update; then
           echo "[crowsnest] apt-get update failed; retrying in 5s..." >&2
           sleep 5
-          apt-get -o Acquire::Languages=none -o Acquire::CompressionTypes::Order::=gz -o Acquire::PDiffs=false update
+          apt-get \
+            -o Acquire::Languages=none \
+            -o Acquire::CompressionTypes::Order::=gz \
+            -o Acquire::PDiffs=false \
+            -o Debug::pkgProblemResolver=1 \
+            -o Acquire::Retries=3 \
+            update
         fi
       '
 
-    # --- In-chroot: build (harmless if NOP) and run installer with skip flags
+    # --- In-chroot: build and run installer with skip flags + FULL DEBUG LOGGING
     - |
-      echo "[crowsnest] make install (skip apt/deps, no systemctl)"
+      echo "[crowsnest] make install (skip apt/deps, no systemctl, debug log)"
       chroot "$1" env \
         DEBIAN_FRONTEND=noninteractive \
         BASE_USER="${IGconf_device_user1}" \
@@ -94,12 +139,31 @@ mmdebstrap:
         CROWSNEST_SKIP_APT_UPDATE=1 \
         CROWSNEST_SKIP_DEP_INSTALL=1 \
         CROWSNEST_NO_ENABLE=1 \
+        CROWSNEST_DEBUG=1 \
         NO_SYSTEMCTL=1 \
         sh -lc '
           set -eu
           cd "/home/'"${IGconf_device_user1}"'/crowsnest"
-          make PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1
-          ./tools/install.sh
+
+          # Route all stdout/stderr through tee -> /var/log/crowsnest/install.log
+          # Also open FD 9 for bash xtrace (BASH_XTRACEFD) so xtrace is readable.
+          {
+            exec 9>>/var/log/crowsnest/install.log
+            export PS4="+ \${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: "
+            export BASH_XTRACEFD=9
+            set -x
+
+            echo "=== ENV SNAPSHOT ==="
+            env | sort
+            echo "=== SHELL ==="
+            bash --version 2>/dev/null || true
+            echo "=== MAKE (build) ==="
+            make PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1
+
+            echo "=== INSTALLER START ==="
+            ./tools/install.sh
+            echo "=== INSTALLER END ==="
+          } 2>&1 | tee -a /var/log/crowsnest/install.log
         '
 
     # --- Host-side: enable crowsnest service (avoid systemctl inside chroot)
