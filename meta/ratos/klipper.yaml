@@ -35,7 +35,7 @@ mmdebstrap:
         usermod -a -G tty,dialout "$IGUSER"
       '
 
-    # --- In-chroot: clone source (no fallback, no idempotence)
+    # --- In-chroot: clone source
     - |
       echo "[klipper] clone repo"
       chroot "$1" env \
@@ -77,22 +77,17 @@ mmdebstrap:
         runuser -u "$IGUSER" -- "/home/$IGUSER/klippy-env/bin/pip" install -r "/home/$IGUSER/klipper/scripts/klippy-requirements.txt"
       '
 
-    # --- In-chroot: Input Shaper requirements (moved here from ratos-base)
+    # --- In-chroot: install numpy into venv (safe check + RED warning)
     - |
-      echo "[klipper] Input Shaper requirements"
+      echo "[klipper] pip install numpy into venv (safe check + RED warning)"
       chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
         set -eu
-        IS_REQ_PREINSTALL_VENV_DIR="/home/$IGUSER/klippy-env"
-        IS_REQ_PREINSTALL_DEPS="python3-numpy python3-matplotlib libatlas3-base libatlas-base-dev libgfortran5"
-        IS_REQ_PREINSTALL_PIP="numpy"
-
-        echo "Installing Input Shaper APT deps (safe if already installed): $IS_REQ_PREINSTALL_DEPS"
-        DEBIAN_FRONTEND=noninteractive apt-get update
-        # Allow re-install without failing; this is idempotent on Debian
-        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $IS_REQ_PREINSTALL_DEPS
-
-        echo "Installing $IS_REQ_PREINSTALL_PIP into venv..."
-        runuser -u "$IGUSER" -- "$IS_REQ_PREINSTALL_VENV_DIR/bin/pip" install -v "$IS_REQ_PREINSTALL_PIP"
+        if [ -x "/home/$IGUSER/klippy-env/bin/pip" ]; then
+          runuser -u "$IGUSER" -- "/home/$IGUSER/klippy-env/bin/pip" install -v numpy
+        else
+          # print red warning to stderr
+          printf "\033[31m[klipper] WARNING: venv not found, skipping numpy install\033[0m\n" >&2
+        fi
       '
 
     # --- Host-side: install systemd unit
