@@ -4,10 +4,6 @@ mmdebstrap:
   variant: apt
   packages:
     - git
-    - make
-    - sudo
-    - jq
-    - whiptail
     - crudini
     - bsdutils
     - findutils
@@ -24,48 +20,62 @@ mmdebstrap:
     - libavcodec-dev
     - libcamera-dev
     - libcamera-apps-lite
-    - rpicam-apps-lite   # <-- fixes the rpicam conflict
     - liblivemedia-dev
     - xxd
     - libssl-dev
-
   customize-hooks:
-    # --- In-chroot: clone source (no fallback, no idempotence)
+    # --- In-chroot: clone repo as target user
     - |
       echo "[crowsnest] clone repo"
-      chroot "$1" env \
-        IGUSER="${IGconf_device_user1}" \
-        REPO="https://github.com/mainsail-crew/crowsnest.git" \
-        sh -lc '
-          set -eu
-          runuser -u "$IGUSER" -- git clone --depth=1 "$REPO" "/home/$IGUSER/crowsnest"'
-
-    # --- In-chroot: seed installer config (optional, prevents prompts)
-    - |
-      echo "[crowsnest] seed tools/.config"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" REPO="https://github.com/mainsail-crew/crowsnest.git" sh -lc '
         set -eu
-        cd "/home/$IGUSER/crowsnest"
-        install -d tools
-        cat > tools/.config <<EOF
-          CROWSNEST_CONFIG_PATH="/home/$IGUSER/printer_data/config"
-          CROWSNEST_LOG_PATH="/home/$IGUSER/printer_data/logs"
-          CROWSNEST_ENV_PATH="/home/$IGUSER/printer_data/systemd"
-          EOF
-        chown -R "$IGUSER:$IGUSER" tools'
+        runuser -u "$IGUSER" -- git clone --depth=1 "$REPO" "/home/$IGUSER/crowsnest"
+      '
 
-    # --- In-chroot: build & install (no systemctl; no sudo)
+    # --- In-chroot: prepare lean APT behavior to reduce memory during updates
+    - |
+      echo "[crowsnest] prep lean apt config"
+      chroot "$1" sh -lc '
+        set -eu
+        cat >/etc/apt/apt.conf.d/99lean <<EOF
+          Acquire::Languages "none";
+          Acquire::GzipIndexes "true";
+          Acquire::CompressionTypes::Order:: "gz";
+          Acquire::PDiffs "false";
+          APT::Sandbox::User "root";
+          EOF
+      '
+
+    # --- In-chroot: warm up apt lists (with retry) using lean options
+    - |
+      echo "[crowsnest] apt-get update warm-up (lean opts)"
+      chroot "$1" sh -lc '
+        set -eu
+        export DEBIAN_FRONTEND=noninteractive
+        # Clear possibly half-written lists from prior attempts
+        rm -rf /var/lib/apt/lists/* || true
+        # First try
+        if ! apt-get -o Acquire::Languages=none -o Acquire::CompressionTypes::Order::=gz -o Acquire::PDiffs=false update; then
+          echo "[crowsnest] apt-get update failed; retrying in 5s..." >&2
+          sleep 5
+          apt-get -o Acquire::Languages=none -o Acquire::CompressionTypes::Order::=gz -o Acquire::PDiffs=false update
+        fi
+      '
+
+    # --- In-chroot: build (harmless if NOP) and install with noninteractive env
     - |
       echo "[crowsnest] make install"
       chroot "$1" env DEBIAN_FRONTEND=noninteractive sh -lc '
         set -eu
         cd "/home/'"${IGconf_device_user1}"'/crowsnest"
+        # Build (if project uses it)
         make PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1
+        # Install; avoid systemctl from being called by scripts
         SUDO= NO_SYSTEMCTL=1 CROWSNEST_UNATTENDED=1 CROWSNEST_ADD_CROWSNEST_MOONRAKER=1 \
           make install PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1
       '
 
-    # --- Host-side: enable unit
+    # --- Host-side: enable crowsnest service (unit should be installed by script)
     - |
-      echo "[crowsnest] enable crowsnest"
+      echo "[crowsnest] enable service"
       $BDEBSTRAP_HOOKS/enable-units "$1" crowsnest
