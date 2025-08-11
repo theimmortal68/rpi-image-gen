@@ -2,6 +2,19 @@
 name: ratos-base
 mmdebstrap:
   variant: apt
+
+  setup-hooks:
+    # --- Add NodeSource LTS repo before package install
+    - |
+      echo "[ratos-base] add NodeSource LTS repo before package install"
+      set -eu
+      CODENAME="$(. "$1/etc/os-release"; echo "$VERSION_CODENAME")"
+      install -d "$1/usr/share/keyrings" "$1/etc/apt/sources.list.d"
+      curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+        | gpg --dearmor > "$1/usr/share/keyrings/nodesource.gpg"
+      echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x $CODENAME main" \
+        > "$1/etc/apt/sources.list.d/nodesource.list"
+
   packages:
     - avahi-daemon
     - bash-completion
@@ -17,9 +30,12 @@ mmdebstrap:
     - libatlas-base-dev
     - libgfortran5
     - unzip
-    - nodejs
+    - curl
+    - nodejs          # from NodeSource LTS repo
+    - pnpm            # distro package
+
   customize-hooks:
-    # --- In-chroot: write pip.conf
+    # --- In-chroot: write /etc/pip.conf
     - |
       echo "[ratos-base] write /etc/pip.conf"
       chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
@@ -28,26 +44,57 @@ mmdebstrap:
           "[global]" \
           "index-url = https://www.piwheels.org/simple" \
           "extra-index-url = https://pypi.org/simple" \
-          > /etc/pip.conf'
+          > /etc/pip.conf
+      '
 
     # --- In-chroot: create systemd override dir
     - |
       echo "[ratos-base] mkdir getty override dir"
       chroot "$1" sh -lc '
         set -eu
-        mkdir -p /etc/systemd/system/getty@tty1.service.d'
+        mkdir -p /etc/systemd/system/getty@tty1.service.d
+      '
 
     # --- In-chroot: write autologin.conf via single-quoted heredoc
     - |
       echo "[ratos-base] write autologin.conf (heredoc)"
       chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
         set -eu
-        cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<'\'EOF\''
+        cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<'\''EOF'\''
         [Service]
         ExecStart=
         ExecStart=-/sbin/agetty --autologin '"$IGUSER"' --noclear %I \$TERM
-        EOF'
-  
+        EOF
+      '
+
+    # --- In-chroot: Input Shaper requirements (APT + venv pip)
+    - |
+      echo "[ratos-base] Input Shaper requirements"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+
+        # Defaults if not provided by env
+        : "${IS_REQ_PREINSTALL_VENV_DIR:=/home/$IGUSER/klippy-env}"
+        : "${IS_REQ_PREINSTALL_DEPS:=python3-numpy python3-matplotlib libatlas3-base libatlas-base-dev libgfortran5}"
+        : "${IS_REQ_PREINSTALL_PIP:=numpy}"
+
+        echo "Installing Input Shaper APT deps: $IS_REQ_PREINSTALL_DEPS"
+        DEBIAN_FRONTEND=noninteractive apt-get update
+        # wordsplitting intentional to honor the list format
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $IS_REQ_PREINSTALL_DEPS
+
+        echo "Checking for Klipper venv at: $IS_REQ_PREINSTALL_VENV_DIR"
+        if [ -d "$IS_REQ_PREINSTALL_VENV_DIR" ] && [ -x "$IS_REQ_PREINSTALL_VENV_DIR/bin/pip" ]; then
+          echo "Installing $IS_REQ_PREINSTALL_PIP into venv..."
+          runuser -u "$IGUSER" -- "$IS_REQ_PREINSTALL_VENV_DIR/bin/pip" install -v "$IS_REQ_PREINSTALL_PIP"
+        else
+          echo "Klipper venv not found; skipping venv pip install."
+        fi
+
+        echo "Cleaning user cache..."
+        runuser -u "$IGUSER" -- rm -rf "/home/$IGUSER/.cache" || true
+      '
+
     # --- Host-side: copy headless_nm template
     - |
       echo "[ratos-base] install headless_nm.txt.template"
@@ -73,5 +120,5 @@ mmdebstrap:
       echo "[ratos-base] install 070-wifi-powersave.rules"
       install -Dm 644 "$RPI_TEMPLATES/etc-udev-rules.d/070-wifi-powersave.rules" "$1/etc/udev/rules.d/070-wifi-powersave.rules"
 
-    # --- Host-side: enable headless_nm 
+    # --- Host-side: enable headless_nm
     - $BDEBSTRAP_HOOKS/enable-units "$1" headless_nm
