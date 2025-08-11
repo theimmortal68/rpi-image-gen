@@ -1,0 +1,55 @@
+---
+name: klipper-mcu
+mmdebstrap:
+  variant: apt
+  packages:
+    - bash
+
+  customize-hooks:
+    # --- In-chroot: configure & build MCU firmware (no flashing in image build)
+    - |
+      echo "[klipper-mcu] configure & build firmware (skip flashing)"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
+        set -euxo pipefail
+        cd "/home/$IGUSER/klipper"
+
+        # Copy board config: boards/r$IGUSER/firmware.config -> .config
+        cp -f "/home/$IGUSER/printer_data/config/RatOS/boards/r$IGUSER/firmware.config" ".config"
+
+        # Reconfigure & clean, then build
+        make olddefconfig
+        make clean
+        chown -R "$IGUSER:$IGUSER" "/home/$IGUSER/klipper"
+        # Build (generate firmware binary) — flashing is not possible in chroot
+        make -j"$(nproc)"
+      '
+
+    # --- Host-side: install systemd unit from the built tree
+    - |
+      echo "[klipper-mcu] install systemd unit"
+      set -euxo pipefail
+      src="$1/home/${IGconf_device_user1}/klipper/scripts/klipper-mcu.service"
+      dst="$1/etc/systemd/system/klipper_mcu.service"
+      install -D -m 0644 "$src" "$dst"
+
+    # --- Host-side: enable the unit (avoid systemctl inside chroot)
+    - |
+      echo "[klipper-mcu] enable klipper_mcu"
+      $BDEBSTRAP_HOOKS/enable-units "$1" klipper_mcu
+
+    # --- In-chroot: final ownership tidy-up
+    - |
+      echo "[klipper-mcu] fix ownership"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
+        set -euxo pipefail
+        chown -R "$IGUSER:$IGUSER" "/home/$IGUSER/klipper"
+      '
+
+    # --- OPTIONAL (commented): flash at first boot on real hardware
+    # - |
+    #   echo "[klipper-mcu] flash firmware on-device (optional)"
+    #   chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
+    #     set -euxo pipefail
+    #     cd "/home/$IGUSER/klipper"
+    #     runuser -u "$IGUSER" -- make flash
+    #   '
