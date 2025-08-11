@@ -4,23 +4,24 @@ mmdebstrap:
   variant: apt
   packages:
     - git
-    - crudini 
-    - bsdutils 
-    - findutils 
+    - make
+    - crudini
+    - bsdutils
+    - findutils
     - v4l-utils
     - curl
-    - build-essential 
-    - libevent-dev 
-    - libjpeg-dev 
-    - libbsd-dev 
+    - build-essential
+    - libevent-dev
+    - libjpeg-dev
+    - libbsd-dev
     - pkg-config
-    - cmake 
-    - libavformat-dev 
-    - libavutil-dev 
-    - libavcodec-dev 
-    - libcamera-dev 
+    - cmake
+    - libavformat-dev
+    - libavutil-dev
+    - libavcodec-dev
+    - libcamera-dev
     - libcamera-apps-lite
-    - liblivemedia-dev  
+    - liblivemedia-dev
     - xxd
     - libssl-dev
   customize-hooks:
@@ -34,17 +35,19 @@ mmdebstrap:
           set -eu
           runuser -u "$IGUSER" -- git clone --depth=1 "$REPO" "/home/$IGUSER/crowsnest"'
 
-    # --- In-chroot: create printer_data (fail if exists; no -p) as the user
+    # --- In-chroot: build & install as root (avoid systemctl in Makefile)
     - |
-      echo "[crowsnest] install crowsnest"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      echo "[crowsnest] make install"
+      chroot "$1" sh -lc '
         set -eu
-        cd "/home/$IGUSER/crowsnest"
-        export CROWSNEST_UNATTENDED=1
-        export CROWSNEST_ADD_CROWSNEST_MOONRAKER=1
-        make install'
+        cd "/home/'"${IGconf_device_user1}"'/crowsnest"
+        # Build (if the project has a build step; harmless if not)
+        make PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1
+        # Install into the image; prevent Makefile from calling systemctl
+        NO_SYSTEMCTL=1 CROWSNEST_UNATTENDED=1 CROWSNEST_ADD_CROWSNEST_MOONRAKER=1 \
+          make install PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1'
 
-    # --- Host-side: enable unit
+    # --- Host-side: enable unit(s) explicitly
     - |
-      echo "[crowsnest] enable crowsnest"
-      $BDEBSTRAP_HOOKS/enable-units "$1" crowsnest 
+      echo "[crowsnest] enable service"
+      $BDEBSTRAP_HOOKS/enable-units "$1" crowsnest
