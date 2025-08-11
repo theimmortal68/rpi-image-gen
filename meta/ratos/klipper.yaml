@@ -32,7 +32,8 @@ mmdebstrap:
       echo "[klipper] usermod add tty,dialout"
       chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
         set -eu
-        usermod -a -G tty,dialout "$IGUSER"'
+        usermod -a -G tty,dialout "$IGUSER"
+      '
 
     # --- In-chroot: clone source (no fallback, no idempotence)
     - |
@@ -43,41 +44,56 @@ mmdebstrap:
         BRANCH="bleeding-edge-v2" \
         sh -lc '
           set -eu
-          runuser -u "$IGUSER" -- git clone --depth=1 --branch "$BRANCH" "$REPO" "/home/$IGUSER/klipper"'
+          runuser -u "$IGUSER" -- git clone --depth=1 --branch "$BRANCH" "$REPO" "/home/$IGUSER/klipper"
+      '
 
-    # --- In-chroot: create printer_data (fail if exists; no -p) as the user
+    # --- In-chroot: create printer_data tree
     - |
-      echo "[klipper] mkdir printer_data tree (as user)"
+      echo "[klipper] mkdir printer_data tree"
       chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
         set -eu
-        runuser -u "$IGUSER" -- mkdir "/home/$IGUSER/printer_data"
-        runuser -u "$IGUSER" -- mkdir "/home/$IGUSER/printer_data/config"
-        runuser -u "$IGUSER" -- mkdir "/home/$IGUSER/printer_data/comms"
-        runuser -u "$IGUSER" -- mkdir "/home/$IGUSER/printer_data/logs"
-        runuser -u "$IGUSER" -- mkdir "/home/$IGUSER/printer_data/gcode"
-        runuser -u "$IGUSER" -- mkdir "/home/$IGUSER/printer_data/systemd"
-        runuser -u "$IGUSER" -- touch "/home/$IGUSER/printer_data/config/printer.cfg"'
+        base="/home/$IGUSER/printer_data"
+        mkdir "$base"
+        mkdir "$base/config"
+        mkdir "$base/comms"
+        mkdir "$base/logs"
+        mkdir "$base/systemd"
+        chown -R "$IGUSER:$IGUSER" "/home/$IGUSER"
+      '
 
-    # --- In-chroot: create virtualenv (no idempotence)
+    # --- In-chroot: create virtualenv
     - |
-        echo "[klipper] create virtualenv"
-        chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
-            set -eu
-            runuser -u "$IGUSER" -- virtualenv -p python3 "/home/$IGUSER/klippy-env"'
+      echo "[klipper] create virtualenv"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        runuser -u "$IGUSER" -- virtualenv -p python3 "/home/$IGUSER/klippy-env"
+      '
 
-    # --- In-chroot: install Python requirements
+    # --- In-chroot: install Klipper Python requirements
     - |
-        echo "[klipper] pip install requirements"
-        chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
-            set -eu
-            runuser -u "$IGUSER" -- "/home/$IGUSER/klippy-env/bin/pip" install -r "/home/$IGUSER/klipper/scripts/klippy-requirements.txt"'
+      echo "[klipper] pip install requirements"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        runuser -u "$IGUSER" -- "/home/$IGUSER/klippy-env/bin/pip" install -r "/home/$IGUSER/klipper/scripts/klippy-requirements.txt"
+      '
 
-    # --- In-chroot: install numpy explicitly
+    # --- In-chroot: Input Shaper requirements (moved here from ratos-base)
     - |
-        echo "[klipper] pip install numpy"
-        chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
-            set -eu
-            runuser -u "$IGUSER" -- "/home/$IGUSER/klippy-env/bin/pip" install numpy'
+      echo "[klipper] Input Shaper requirements"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        IS_REQ_PREINSTALL_VENV_DIR="/home/$IGUSER/klippy-env"
+        IS_REQ_PREINSTALL_DEPS="python3-numpy python3-matplotlib libatlas3-base libatlas-base-dev libgfortran5"
+        IS_REQ_PREINSTALL_PIP="numpy"
+
+        echo "Installing Input Shaper APT deps (safe if already installed): $IS_REQ_PREINSTALL_DEPS"
+        DEBIAN_FRONTEND=noninteractive apt-get update
+        # Allow re-install without failing; this is idempotent on Debian
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $IS_REQ_PREINSTALL_DEPS
+
+        echo "Installing $IS_REQ_PREINSTALL_PIP into venv..."
+        runuser -u "$IGUSER" -- "$IS_REQ_PREINSTALL_VENV_DIR/bin/pip" install -v "$IS_REQ_PREINSTALL_PIP"
+      '
 
     # --- Host-side: install systemd unit
     - |
