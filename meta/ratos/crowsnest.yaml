@@ -5,6 +5,9 @@ mmdebstrap:
   packages:
     - git
     - make
+    - sudo
+    - jq
+    - whiptail
     - crudini
     - bsdutils
     - findutils
@@ -35,19 +38,27 @@ mmdebstrap:
           set -eu
           runuser -u "$IGUSER" -- git clone --depth=1 "$REPO" "/home/$IGUSER/crowsnest"'
 
-    # --- In-chroot: build & install as root (avoid systemctl in Makefile)
+    # --- In-chroot: show what install will do (dry run) to aid debugging
     - |
-      echo "[crowsnest] make install"
+      echo "[crowsnest] make -n install (dry-run)"
       chroot "$1" sh -lc '
         set -eu
         cd "/home/'"${IGconf_device_user1}"'/crowsnest"
-        # Build (if the project has a build step; harmless if not)
+        make -n install PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1 || true'
+
+    # --- In-chroot: build & install as root (noninteractive; avoid systemctl)
+    - |
+      echo "[crowsnest] make install"
+      chroot "$1" env DEBIAN_FRONTEND=noninteractive sh -lc '
+        set -eu
+        cd "/home/'"${IGconf_device_user1}"'/crowsnest"
+        # Build (harmless if no build step)
         make PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1
-        # Install into the image; prevent Makefile from calling systemctl
+        # Install into the image; keep it noninteractive and avoid systemctl calls
         NO_SYSTEMCTL=1 CROWSNEST_UNATTENDED=1 CROWSNEST_ADD_CROWSNEST_MOONRAKER=1 \
           make install PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1'
 
-    # --- Host-side: enable unit(s) explicitly
+    # --- Host-side: enable service(s) explicitly
     - |
       echo "[crowsnest] enable service"
       $BDEBSTRAP_HOOKS/enable-units "$1" crowsnest
