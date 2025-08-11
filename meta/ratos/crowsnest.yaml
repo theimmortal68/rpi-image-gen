@@ -24,9 +24,11 @@ mmdebstrap:
     - libavcodec-dev
     - libcamera-dev
     - libcamera-apps-lite
+    - rpicam-apps-lite   # <-- fixes the rpicam conflict
     - liblivemedia-dev
     - xxd
     - libssl-dev
+
   customize-hooks:
     # --- In-chroot: clone source (no fallback, no idempotence)
     - |
@@ -38,27 +40,32 @@ mmdebstrap:
           set -eu
           runuser -u "$IGUSER" -- git clone --depth=1 "$REPO" "/home/$IGUSER/crowsnest"'
 
-    # --- In-chroot: show what install will do (dry run) to aid debugging
+    # --- In-chroot: seed installer config (optional, prevents prompts)
     - |
-      echo "[crowsnest] make -n install (dry-run)"
-      chroot "$1" sh -lc '
+      echo "[crowsnest] seed tools/.config"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
         set -eu
-        cd "/home/'"${IGconf_device_user1}"'/crowsnest"
-        make -n install PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1 || true'
+        cd "/home/$IGUSER/crowsnest"
+        install -d tools
+        cat > tools/.config <<EOF
+CROWSNEST_CONFIG_PATH="/home/$IGUSER/printer_data/config"
+CROWSNEST_LOG_PATH="/home/$IGUSER/printer_data/logs"
+CROWSNEST_ENV_PATH="/home/$IGUSER/printer_data/systemd"
+EOF
+        chown -R "$IGUSER:$IGUSER" tools'
 
-    # --- In-chroot: build & install as root (noninteractive; avoid systemctl)
+    # --- In-chroot: build & install (no systemctl; no sudo)
     - |
       echo "[crowsnest] make install"
       chroot "$1" env DEBIAN_FRONTEND=noninteractive sh -lc '
         set -eu
         cd "/home/'"${IGconf_device_user1}"'/crowsnest"
-        # Build (harmless if no build step)
         make PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1
-        # Install into the image; keep it noninteractive and avoid systemctl calls
-        NO_SYSTEMCTL=1 CROWSNEST_UNATTENDED=1 CROWSNEST_ADD_CROWSNEST_MOONRAKER=1 \
-          make install PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1'
+        SUDO= NO_SYSTEMCTL=1 CROWSNEST_UNATTENDED=1 CROWSNEST_ADD_CROWSNEST_MOONRAKER=1 \
+          make install PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1
+      '
 
-    # --- Host-side: enable service(s) explicitly
+    # --- Host-side: enable unit
     - |
-      echo "[crowsnest] enable service"
+      echo "[crowsnest] enable crowsnest"
       $BDEBSTRAP_HOOKS/enable-units "$1" crowsnest
