@@ -94,3 +94,8 @@ mmdebstrap:
 
     # --- Host-side: enable headless_nm 
     - $BDEBSTRAP_HOOKS/enable-units "$1" headless_nm
+
+    # --- Host-side: Setup passwordless sudo for ${IGconf_device_user1}
+    - |
+      echo "[ratos-base] making ${IGconf_device_user1} passwordless sudo for easy setup ..."
+      echo -e "${IGconf_device_user1} ALL=(ALL) NOPASSWD:ALL" >> "$1/etc/sudoers.d/010_pi-nopasswd"
