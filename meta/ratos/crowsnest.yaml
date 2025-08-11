@@ -48,10 +48,10 @@ mmdebstrap:
         cd "/home/$IGUSER/crowsnest"
         install -d tools
         cat > tools/.config <<EOF
-CROWSNEST_CONFIG_PATH="/home/$IGUSER/printer_data/config"
-CROWSNEST_LOG_PATH="/home/$IGUSER/printer_data/logs"
-CROWSNEST_ENV_PATH="/home/$IGUSER/printer_data/systemd"
-EOF
+          CROWSNEST_CONFIG_PATH="/home/$IGUSER/printer_data/config"
+          CROWSNEST_LOG_PATH="/home/$IGUSER/printer_data/logs"
+          CROWSNEST_ENV_PATH="/home/$IGUSER/printer_data/systemd"
+          EOF
         chown -R "$IGUSER:$IGUSER" tools'
 
     # --- In-chroot: build & install (no systemctl; no sudo)
