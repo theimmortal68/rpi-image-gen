@@ -47,20 +47,20 @@ mmdebstrap:
 
         # 3) After sourcing libs, inject function overrides honoring skip flags
         sed -i "/libs\/update_manager.sh\"/a \
-# -- injected: skip hooks for chroot builds --\\n\
-if [ \"\${CROWSNEST_SKIP_APT_UPDATE:-0}\" = \"1\" ]; then\\n\
-  run_apt_update() { return 0; }\\n\
-fi\\n\
-if [ \"\${CROWSNEST_SKIP_DEP_INSTALL:-0}\" = \"1\" ]; then\\n\
-  shallow_cs_dependencies_check() { return 1; }\\n\
-  link_pkglist_rpi() { :; }\\n\
-  link_pkglist_generic() { :; }\\n\
-  source_pkglist_file() { :; }\\n\
-  install_dependencies() { return 0; }\\n\
-fi\\n\
-if [ \"\${CROWSNEST_NO_ENABLE:-0}\" = \"1\" ]; then\\n\
-  enable_service() { return 0; }\\n\
-fi" "$f"
+        # -- injected: skip hooks for chroot builds --\\n\
+        if [ \"\${CROWSNEST_SKIP_APT_UPDATE:-0}\" = \"1\" ]; then\\n\
+          run_apt_update() { return 0; }\\n\
+        fi\\n\
+        if [ \"\${CROWSNEST_SKIP_DEP_INSTALL:-0}\" = \"1\" ]; then\\n\
+          shallow_cs_dependencies_check() { return 1; }\\n\
+          link_pkglist_rpi() { :; }\\n\
+          link_pkglist_generic() { :; }\\n\
+          source_pkglist_file() { :; }\\n\
+          install_dependencies() { return 0; }\\n\
+        fi\\n\
+        if [ \"\${CROWSNEST_NO_ENABLE:-0}\" = \"1\" ]; then\\n\
+          enable_service() { return 0; }\\n\
+        fi" "$f"
       '
 
     # --- In-chroot: lean APT config + warm-up (mitigates memory spikes)
@@ -69,12 +69,12 @@ fi" "$f"
       chroot "$1" sh -lc '
         set -eu
         cat >/etc/apt/apt.conf.d/99lean <<EOF
-Acquire::Languages "none";
-Acquire::GzipIndexes "true";
-Acquire::CompressionTypes::Order:: "gz";
-Acquire::PDiffs "false";
-APT::Sandbox::User "root";
-EOF
+          Acquire::Languages "none";
+          Acquire::GzipIndexes "true";
+          Acquire::CompressionTypes::Order:: "gz";
+          Acquire::PDiffs "false";
+          APT::Sandbox::User "root";
+        EOF
         export DEBIAN_FRONTEND=noninteractive
         rm -rf /var/lib/apt/lists/* || true
         if ! apt-get -o Acquire::Languages=none -o Acquire::CompressionTypes::Order::=gz -o Acquire::PDiffs=false update; then
