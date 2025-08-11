@@ -4,7 +4,6 @@ mmdebstrap:
   variant: apt
 
   setup-hooks:
-    # --- Add NodeSource LTS repo before package install (works even if $1/etc/os-release doesn't exist yet)
     - |
       echo "[ratos-base] add NodeSource LTS repo before package install"
       set -eu
@@ -13,10 +12,19 @@ mmdebstrap:
         . "$1/etc/os-release" || true
         CODENAME="${VERSION_CODENAME:-$CODENAME}"
       fi
-      install -d "$1/usr/share/keyrings" "$1/etc/apt/sources.list.d"
-      curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
-        | gpg --dearmor > "$1/usr/share/keyrings/nodesource.gpg"
-      echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x $CODENAME main" \
+
+      # Keyrings dir & list dir
+      install -d -m 0755 "$1/etc/apt/keyrings" "$1/etc/apt/sources.list.d"
+
+      # Fetch and dearmor NodeSource key (host curl+gpg)
+      tmpkey="$(mktemp)"
+      curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key > "$tmpkey"
+      gpg --dearmor < "$tmpkey" > "$1/etc/apt/keyrings/nodesource.gpg"
+      rm -f "$tmpkey"
+      chmod 0644 "$1/etc/apt/keyrings/nodesource.gpg"
+
+      # Source list: point signed-by to /etc/apt/keyrings
+      echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x ${CODENAME} main" \
         > "$1/etc/apt/sources.list.d/nodesource.list"
 
   packages:
