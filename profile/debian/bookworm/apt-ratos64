@@ -14,6 +14,9 @@ ratos/kiauh
 ratos/klipper
 ratos/moonraker
 ratos/mainsail
-ratos/crowsnest
+#ratos/crowsnest
 ratos/timelapse
 ratos/sonar
+ratos/main
+ratos/linear-movement
+ratos/klipperscreen
