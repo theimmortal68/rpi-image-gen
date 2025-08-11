@@ -1,0 +1,90 @@
+---
+name: main
+mmdebstrap:
+  variant: apt
+  packages:
+    - git
+    - npm
+    - curl
+    - python3-serial
+    - python3-opencv
+  customize-hooks:
+    # --- In-chroot: clone RatOS theme and RatOS configurator, write release, set hostname, variant, MOTD
+    - |
+      echo "[ratos] setup theme, configurator, release, hostname, variant, motd"
+      chroot "$1" env \
+        IGUSER="${IGconf_device_user1}" \
+        RATOS_THEME_SHIP="https://github.com/Rat-OS/RatOS-theme.git" \
+        RATOS_THEME_BRANCH="v2.1.x" \
+        RATOS_CONFIGURATOR_SHIP="https://github.com/theimmortal68/RatOS-configurator.git" \
+        RATOS_CONFIGURATOR_BRANCH="v2.1.x-backport" \
+        DIST_NAME="RatOS" \
+        DIST_VERSION="2.1.x" \
+        sh -lc '
+          set -eu
+
+          # Clone RatOS theme
+          runuser -u "$IGUSER" -- git clone --depth=1 --branch "$RATOS_THEME_BRANCH" "$RATOS_THEME_SHIP" \
+            "/home/$IGUSER/printer_data/config/.theme"
+
+          # Clone RatOS Configurator
+          runuser -u "$IGUSER" -- git clone --depth=1 --branch "$RATOS_CONFIGURATOR_BRANCH" "$RATOS_CONFIGURATOR_SHIP" \
+            "/home/$IGUSER/ratos-configurator"
+
+          # Write release file
+          echo "$DIST_NAME v$DIST_VERSION ($(grep -E \"^VERSION_CODENAME=\" /etc/os-release | cut -d= -f2))" \
+            > "/etc/${DIST_NAME,,}-release"
+
+          # Set hostname to lowercased DIST_NAME and update /etc/hosts
+          NEW_HOSTNAME=${DIST_NAME,,}
+          if [ -f /etc/hostname ]; then
+            ORG_HOSTNAME=$(head -n1 /etc/hostname | tr -d "\r\n")
+          else
+            ORG_HOSTNAME=raspberrypi
+          fi
+          echo "$NEW_HOSTNAME" > /etc/hostname
+          if [ -f /etc/hosts ]; then
+            sed -i -e "s/\\b${ORG_HOSTNAME}\\b/${NEW_HOSTNAME}/g" /etc/hosts
+          fi
+
+          # Create variant marker
+          echo "${DIST_NAME,,}" > "/etc/${DIST_NAME,,}-variant"
+
+          # MOTD banner
+          cat <<EOF > /etc/motd
+   ____       _   ____   _____
+  |  _ \\ __ _| |_|  _ \\ / ____|
+  | |_) / _\` | __| |_) | (___
+  |  _ < (_| | |_|  _ < \\___ \\
+  |_| \\_\\__,_|\\__|_| \\_\\____/
+EOF
+        '
+
+    # --- In-chroot: set Git default for the target user
+    - |
+      echo "[ratos] set git pull.ff only (user global)"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        runuser -u "$IGUSER" -- git config --global pull.ff only
+      '
+
+    # --- In-chroot: run configurator setup script
+    - |
+      echo "[ratos] run configurator setup"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        runuser -u "$IGUSER" -- bash "/home/$IGUSER/ratos-configurator/app/scripts/setup.sh"
+      '
+
+    # --- In-chroot: start configurator in background and wait for readiness
+    - |
+      echo "[ratos] start configurator and wait for readiness (HTTP 404 on :3000)"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        cd "/home/$IGUSER/ratos-configurator/app"
+        # Standard background start
+        runuser -u "$IGUSER" -- bash -lc "npm run start & echo \$! > /tmp/ratos_configurator.pid"
+        # Alternative: foreground for debug
+        # runuser -u "$IGUSER" -- bash -lc "npm run start --no-daemon"
+        timeout 300 bash -lc '\''until [ "$(curl -s -o /dev/null -w "%{http_code}" localhost:3000)" = "404" ]; do sleep 5; done'\'' || true
+      '
