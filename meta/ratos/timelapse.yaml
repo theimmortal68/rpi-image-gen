@@ -1,0 +1,57 @@
+---
+name: moonraker-timelapse
+mmdebstrap:
+  variant: apt
+  packages:
+    - git
+    - ffmpeg
+  customize-hooks:
+    # --- In-chroot: clone repo as the target user (no idempotence; fails if dir exists)
+    - |
+      echo "[timelapse] clone repo"
+      chroot "$1" env \
+        IGUSER="${IGconf_device_user1}" \
+        REPO="https://github.com/mainsail-crew/moonraker-timelapse.git" \
+        sh -lc '
+          set -eu
+          runuser -u "$IGUSER" -- git clone --depth=1 "$REPO" "/home/$IGUSER/moonraker-timelapse"'
+
+    # --- In-chroot: link component into Moonraker if components dir exists
+    - |
+      echo "[timelapse] link Moonraker component"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        comp="/home/$IGUSER/moonraker/moonraker/components"
+        src="/home/$IGUSER/moonraker-timelapse/component/timelapse.py"
+        [ -d "$comp" ] || exit 0
+        # no -f → fail if link/file already exists (no idempotence)
+        ln -s "$src" "$comp/timelapse.py"'
+
+    # --- In-chroot: link macros into printer_data/config if it exists
+    - |
+      echo "[timelapse] link Klipper macro"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        cfg="/home/$IGUSER/printer_data/config"
+        src="/home/$IGUSER/moonraker-timelapse/klipper_macro/timelapse.cfg"
+        [ -d "$cfg" ] || exit 0
+        ln -s "$src" "$cfg/timelapse.cfg"'
+
+    # --- Host-side (optional): stage a config fragment if you have one in templates
+    #     If present, this will be appended to MOONRAKER_CONFIG in the next step.
+    - |
+      echo "[timelapse] (optional) stage moonraker_timelapse.conf"
+      test -f "$RPI_TEMPLATES/home-printer_data-config/moonraker_timelapse.conf" || exit 0
+      install -Dm 644 "$RPI_TEMPLATES/home-printer_data-config/moonraker_timelapse.conf" \
+        "$1/etc/moonraker_timelapse.conf"
+
+    # --- In-chroot: append config fragment if MOONRAKER_CONFIG is set and files exist
+    #     Pass MOONRAKER_CONFIG from the outer environment if you have it defined.
+    - |
+      echo "[timelapse] (optional) append to moonraker.conf"
+      chroot "$1" env MOONRAKER_CONFIG="${MOONRAKER_CONFIG:-}" sh -lc '
+        set -eu
+        [ -n "${MOONRAKER_CONFIG:-}" ] || exit 0
+        [ -f "$MOONRAKER_CONFIG" ] || exit 0
+        [ -f /etc/moonraker_timelapse.conf ] || exit 0
+        cat /etc/moonraker_timelapse.conf >> "$MOONRAKER_CONFIG"'
