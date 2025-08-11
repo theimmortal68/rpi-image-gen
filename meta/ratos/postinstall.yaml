@@ -3,6 +3,14 @@ name: postinstall
 mmdebstrap:
   variant: apt
   customize-hooks:
+    # --- Host-side: copy remaining support files
+    - |
+      echo "[postinstall] copy RatOS support files"
+      install -Dm 644 "$RPI_TEMPLATES/etc-avahi/avahi-daemon.conf" \
+        "$1/etc/avahi/avahi-daemon.conf"
+      install -Dm 644 "$RPI_TEMPLATES/var-log/ratos.log" \
+        "$1/var/log/ratos.log"
+        
     # --- In-chroot: stop RatOS Configurator if running (final cleanup)
     - |
       echo "[postinstall] stop RatOS Configurator if running"
