@@ -5,20 +5,27 @@ mmdebstrap:
   packages:
     - git
   customize-hooks:
-    # Add user to required groups
-    - usermod -a -G tty,dialout "${IGconf_device_user1}"
+    # In-chroot: add user to groups, clone, install
+    - |
+      echo "[moonraker] setup"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" REPO="https://github.com/Arksine/moonraker" sh -lc '
+        set -eu
+        # Add to serial groups
+        usermod -a -G tty,dialout "$IGUSER"
 
-    # Clone moonraker repository
-    - runuser -u "${IGconf_device_user1}" -- git clone --depth=1 "${REPO}" "$1/home/${IGconf_device_user1}/moonraker"
+        # Clone repo (fail if exists — no idempotence)
+        runuser -u "$IGUSER" -- git clone --depth=1 "$REPO" "/home/$IGUSER/moonraker"
 
-    # Run moonraker installer
-    - runuser -u "${IGconf_device_user1}" -- "$1/home/${IGconf_device_user1}/moonraker/scripts/install-moonraker.sh -s -z"
+        # Run installer script
+        runuser -u "$IGUSER" -- "/home/$IGUSER/moonraker/scripts/install-moonraker.sh" -s -z'
 
-    # Copy moonraker.conf to config dir
-    - install -Dm 644 "$RPI_TEMPLATES/home-printer_data-config/moonraker.conf" "$1/home/${IGconf_device_user1}/printer_data/config/moonraker.conf"
+    # Host-side: copy moonraker.conf
+    - |
+      echo "[moonraker] install config"
+      install -Dm 644 "$RPI_TEMPLATES/home-printer_data-config/moonraker.conf" \
+        "$1/home/${IGconf_device_user1}/printer_data/config/moonraker.conf"
 
-    # Fix ownership for user directories
-    - "chown -R ${IGconf_device_user1}:${IGconf_device_user1} $1/home/${IGconf_device_user1}"
-
-    # Enable moonraker service
-    - $BDEBSTRAP_HOOKS/enable-units "$1" moonraker
+    # Host-side: enable moonraker service
+    - |
+      echo "[moonraker] enable service"
+      $BDEBSTRAP_HOOKS/enable-units "$1" moonraker
