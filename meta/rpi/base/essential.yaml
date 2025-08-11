@@ -11,3 +11,5 @@ mmdebstrap:
     - procps
     - nano
     - zstd
+    - curl
+    - gpgv

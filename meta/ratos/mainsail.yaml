@@ -11,7 +11,7 @@ mmdebstrap:
     # --- In-chroot: remove default nginx site
     - |
       echo "[mainsail] remove default site"
-      chroot "$1" sh -lc '
+      chroot "$1" bash -lc '
         set -eu
         rm -f /etc/nginx/sites-enabled/default'
 
@@ -25,7 +25,7 @@ mmdebstrap:
     # --- In-chroot: enable mainsail site (make proper symlink)
     - |
       echo "[mainsail] enable site"
-      chroot "$1" sh -lc '
+      chroot "$1" bash -lc '
         set -eu
         rm -f /etc/nginx/sites-enabled/mainsail
         ln -s ../sites-available/mainsail /etc/nginx/sites-enabled/mainsail'
@@ -33,14 +33,14 @@ mmdebstrap:
     # --- In-chroot: tweak logrotate (14 -> 2)
     - |
       echo "[mainsail] set logrotate cycle to 2"
-      chroot "$1" sh -lc '
+      chroot "$1" bash -lc '
         set -eu
         sed -i "s/rotate 14/rotate 2/" /etc/logrotate.d/nginx'
 
     # --- In-chroot: link nginx logs to printer_data/logs
     - |
       echo "[mainsail] link logs"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         ln -s /var/log/nginx/mainsail-access.log "/home/$IGUSER/printer_data/logs/mainsail-access.log"
         ln -s /var/log/nginx/mainsail-error.log  "/home/$IGUSER/printer_data/logs/mainsail-error.log"'
@@ -48,14 +48,14 @@ mmdebstrap:
     # --- In-chroot: download mainsail zip to user home (as user)
     - |
       echo "[mainsail] download mainsail.zip"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         runuser -u "$IGUSER" -- wget -q --show-progress -O "/home/$IGUSER/mainsail.zip" "https://github.com/mainsail-crew/mainsail/releases/latest/download/mainsail.zip"'
 
     # --- In-chroot: create destination dir (no -p; fail if exists), then unzip
     - |
       echo "[mainsail] unzip to ~/mainsail"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         runuser -u "$IGUSER" -- mkdir "/home/$IGUSER/mainsail"
         runuser -u "$IGUSER" -- unzip "/home/$IGUSER/mainsail.zip" -d "/home/$IGUSER/mainsail"
@@ -64,27 +64,27 @@ mmdebstrap:
     # --- In-chroot: add user to www-data group
     - |
       echo "[mainsail] add user to www-data"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         usermod -a -G www-data "$IGUSER"'
 
     # --- In-chroot: ensure group execute on user home
     - |
       echo "[mainsail] chmod g+x ~"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         chmod g+x "/home/$IGUSER"'
 
     # --- In-chroot: clone mainsail-config
     - |
       echo "[mainsail] clone mainsail-config"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         runuser -u "$IGUSER" -- git clone --depth=1 "https://github.com/mainsail-crew/mainsail-config.git" "/home/$IGUSER/mainsail-config"'
 
     # --- In-chroot: link mainsail.cfg into printer_data
     - |
       echo "[mainsail] link mainsail.cfg"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         ln -s "/home/$IGUSER/mainsail-config/mainsail.cfg" "/home/$IGUSER/printer_data/config/mainsail.cfg"'

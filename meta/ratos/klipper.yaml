@@ -30,7 +30,7 @@ mmdebstrap:
     # --- In-chroot: add user to serial groups
     - |
       echo "[klipper] usermod add tty,dialout"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         usermod -a -G tty,dialout "$IGUSER"
       '
@@ -42,7 +42,7 @@ mmdebstrap:
         IGUSER="${IGconf_device_user1}" \
         REPO="https://github.com/KalicoCrew/kalico.git" \
         BRANCH="bleeding-edge-v2" \
-        sh -lc '
+        bash -lc '
           set -eu
           runuser -u "$IGUSER" -- git clone --depth=1 --branch "$BRANCH" "$REPO" "/home/$IGUSER/klipper"
       '
@@ -50,7 +50,7 @@ mmdebstrap:
     # --- In-chroot: create printer_data tree
     - |
       echo "[klipper] mkdir printer_data tree"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         base="/home/$IGUSER/printer_data"
         mkdir "$base"
@@ -64,7 +64,7 @@ mmdebstrap:
     # --- In-chroot: create virtualenv
     - |
       echo "[klipper] create virtualenv"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         runuser -u "$IGUSER" -- virtualenv -p python3 "/home/$IGUSER/klippy-env"
       '
@@ -72,7 +72,7 @@ mmdebstrap:
     # --- In-chroot: install Klipper Python requirements
     - |
       echo "[klipper] pip install requirements"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         runuser -u "$IGUSER" -- "/home/$IGUSER/klippy-env/bin/pip" install -r "/home/$IGUSER/klipper/scripts/klippy-requirements.txt"
       '
@@ -80,7 +80,7 @@ mmdebstrap:
     # --- In-chroot: install numpy into venv (safe check + RED warning)
     - |
       echo "[klipper] pip install numpy into venv (safe check + RED warning)"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         if [ -x "/home/$IGUSER/klippy-env/bin/pip" ]; then
           runuser -u "$IGUSER" -- "/home/$IGUSER/klippy-env/bin/pip" install -v numpy

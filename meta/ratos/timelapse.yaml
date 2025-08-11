@@ -12,14 +12,14 @@ mmdebstrap:
       chroot "$1" env \
         IGUSER="${IGconf_device_user1}" \
         REPO="https://github.com/mainsail-crew/moonraker-timelapse.git" \
-        sh -lc '
+        bash -lc '
           set -eu
           runuser -u "$IGUSER" -- git clone --depth=1 "$REPO" "/home/$IGUSER/moonraker-timelapse"'
 
     # --- In-chroot: link component into Moonraker if components dir exists
     - |
       echo "[timelapse] link Moonraker component"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         comp="/home/$IGUSER/moonraker/moonraker/components"
         src="/home/$IGUSER/moonraker-timelapse/component/timelapse.py"
@@ -30,7 +30,7 @@ mmdebstrap:
     # --- In-chroot: link macros into printer_data/config if it exists
     - |
       echo "[timelapse] link Klipper macro"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         cfg="/home/$IGUSER/printer_data/config"
         src="/home/$IGUSER/moonraker-timelapse/klipper_macro/timelapse.cfg"
@@ -49,7 +49,7 @@ mmdebstrap:
     #     Pass MOONRAKER_CONFIG from the outer environment if you have it defined.
     - |
       echo "[timelapse] (optional) append to moonraker.conf"
-      chroot "$1" env MOONRAKER_CONFIG="${MOONRAKER_CONFIG:-}" sh -lc '
+      chroot "$1" env MOONRAKER_CONFIG="${MOONRAKER_CONFIG:-}" bash -lc '
         set -eu
         [ -n "${MOONRAKER_CONFIG:-}" ] || exit 0
         [ -f "$MOONRAKER_CONFIG" ] || exit 0

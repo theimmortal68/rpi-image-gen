@@ -20,7 +20,7 @@ mmdebstrap:
         RATOS_CONFIGURATOR_BRANCH="v2.1.x-backport" \
         DIST_NAME="RatOS" \
         DIST_VERSION="2.1.x" \
-        sh -lc '
+        bash -lc '
           set -eu
 
           # Clone RatOS theme
@@ -54,7 +54,7 @@ mmdebstrap:
     # --- In-chroot: set Git default for the target user
     - |
       echo "[ratos] set git pull.ff only (user global)"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         runuser -u "$IGUSER" -- git config --global pull.ff only
       '
@@ -62,7 +62,7 @@ mmdebstrap:
     # --- In-chroot: run configurator setup script
     - |
       echo "[ratos] run configurator setup"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         runuser -u "$IGUSER" -- bash "/home/$IGUSER/ratos-configurator/app/scripts/setup.sh"
       '
@@ -70,7 +70,7 @@ mmdebstrap:
     # --- In-chroot: start configurator in background and wait for readiness
     - |
       echo "[ratos] start configurator and wait for readiness (HTTP 404 on :3000)"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         cd "/home/$IGUSER/ratos-configurator/app"
         # Standard background start

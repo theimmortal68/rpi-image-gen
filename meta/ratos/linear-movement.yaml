@@ -13,7 +13,7 @@ mmdebstrap:
         BASE_USER="${IGconf_device_user1}" \
         LINEAR_MOVEMENT_ANALYSIS_SHIP="https://github.com/worksasintended/klipper_linear_movement_analysis.git" \
         LINEAR_MOVEMENT_ANALYSIS_BRANCH="main" \
-        sh -lc '
+        bash -lc '
           set -eu
           cd "/home/$BASE_USER"
           runuser -u "$BASE_USER" -- git clone --branch "$LINEAR_MOVEMENT_ANALYSIS_BRANCH" \
@@ -23,7 +23,7 @@ mmdebstrap:
     # --- In-chroot: register extension with RatOS (run as the user)
     - |
       echo "[klipper-linear-movement-analysis] register extension"
-      chroot "$1" env BASE_USER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env BASE_USER="${IGconf_device_user1}" bash -lc '
         set -eu
         EXTENSION_PATH="/home/$BASE_USER/klipper_linear_movement_analysis"
         SCRIPT_NAME="linear_movement_vibrations.py"
@@ -33,7 +33,7 @@ mmdebstrap:
     # --- In-chroot: install matplotlib into Klipper venv (as the user)
     - |
       echo "[klipper-linear-movement-analysis] install matplotlib into klippy-env"
-      chroot "$1" env BASE_USER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env BASE_USER="${IGconf_device_user1}" bash -lc '
         set -eu
         runuser -u "$BASE_USER" -- "/home/$BASE_USER/klippy-env/bin/pip" install -v matplotlib
       '
@@ -41,7 +41,7 @@ mmdebstrap:
     # --- In-chroot: post-install cleanup (trim pip/user caches)
     - |
       echo "[klipper-linear-movement-analysis] cleanup caches"
-      chroot "$1" env BASE_USER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env BASE_USER="${IGconf_device_user1}" bash -lc '
         set -eu
         # Remove user cache (contains pip wheels, etc.)
         rm -rf "/home/$BASE_USER/.cache" || true

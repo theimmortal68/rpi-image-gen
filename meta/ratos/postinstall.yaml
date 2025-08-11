@@ -6,7 +6,7 @@ mmdebstrap:
     # --- In-chroot: stop RatOS Configurator if running (final cleanup)
     - |
       echo "[postinstall] stop RatOS Configurator if running"
-      chroot "$1" sh -lc '
+      chroot "$1" bash -lc '
         set -e
         if [ -f /tmp/ratos_configurator.pid ]; then
           pid="$(cat /tmp/ratos_configurator.pid || true)"

@@ -27,7 +27,7 @@ mmdebstrap:
     # --- In-chroot: clone repo as target user
     - |
       echo "[crowsnest] clone repo"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" REPO="https://github.com/mainsail-crew/crowsnest.git" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" REPO="https://github.com/mainsail-crew/crowsnest.git" bash -lc '
         set -eu
         runuser -u "$IGUSER" -- git clone --depth=1 "$REPO" "/home/$IGUSER/crowsnest"
       '
@@ -35,7 +35,7 @@ mmdebstrap:
     # --- In-chroot: inject a shim that overrides risky steps when flags are set
     - |
       echo "[crowsnest] write injected_chroot_shim.sh"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         cat > "/home/$IGUSER/crowsnest/tools/injected_chroot_shim.sh" <<"SHIM_EOF"
         # Sourced after libs in tools/install.sh; makes installer chroot-friendly.
@@ -76,7 +76,7 @@ mmdebstrap:
     # --- In-chroot: sed-insert a single source line to load the shim (minimal)
     - |
       echo "[crowsnest] patch install.sh to source shim (minimal)"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         f="/home/$IGUSER/crowsnest/tools/install.sh"
         # Insert right after the last lib source (libs/update_manager.sh)
@@ -86,7 +86,7 @@ mmdebstrap:
     # --- In-chroot: create log dir for debug output
     - |
       echo "[crowsnest] create log dir"
-      chroot "$1" sh -lc '
+      chroot "$1" bash -lc '
         set -eu
         install -d -m 0755 /var/log/crowsnest
       '
@@ -94,7 +94,7 @@ mmdebstrap:
     # --- In-chroot: lean APT config + warm-up with extra debug (mitigates mem spikes)
     - |
       echo "[crowsnest] prep lean apt config + warm-up (debug)"
-      chroot "$1" sh -lc '
+      chroot "$1" bash -lc '
         set -eu
         cat >/etc/apt/apt.conf.d/99lean <<EOF
         Acquire::Languages "none";
@@ -141,7 +141,7 @@ mmdebstrap:
         CROWSNEST_NO_ENABLE=1 \
         CROWSNEST_DEBUG=1 \
         NO_SYSTEMCTL=1 \
-        sh -lc '
+        bash -lc '
           set -eu
           cd "/home/'"${IGconf_device_user1}"'/crowsnest"
 

@@ -8,21 +8,21 @@ mmdebstrap:
     # --- In-chroot: add user to serial groups
     - |
       echo "[moonraker] usermod add tty,dialout"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         usermod -a -G tty,dialout "$IGUSER"'
 
     # --- In-chroot: clone repository (no idempotence)
     - |
       echo "[moonraker] clone repo"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" REPO="https://github.com/Arksine/moonraker" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" REPO="https://github.com/Arksine/moonraker" bash -lc '
         set -eu
         runuser -u "$IGUSER" -- git clone --depth=1 "$REPO" "/home/$IGUSER/moonraker"'
 
     # --- In-chroot: run installer
     - |
       echo "[moonraker] run installer"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         runuser -u "$IGUSER" -- "/home/$IGUSER/moonraker/scripts/install-moonraker.sh" -s -z'
 

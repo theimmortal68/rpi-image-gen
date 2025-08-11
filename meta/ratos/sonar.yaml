@@ -14,16 +14,16 @@ mmdebstrap:
         IGUSER="${IGconf_device_user1}" \
         REPO="https://github.com/mainsail-crew/sonar.git" \
         BRANCH="main" \
-        sh -lc '
+        bash -lc '
           set -eu
           runuser -u "$IGUSER" -- git clone --depth=1 -b "$BRANCH" "$REPO" "/home/$IGUSER/sonar"'
 
     # --- In-chroot: write ./tools/.config owned by the user
     - |
       echo "[sonar] write tools/.config"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
-        runuser -u "$IGUSER" -- sh -lc "
+        runuser -u "$IGUSER" -- bash -lc "
           printf \"%s\n\" \
             \"BASE_USER=\\\"$IGUSER\\\"\" \
             \"SONAR_DATA_PATH=\\\"/home/$IGUSER/printer_data\\\"\" \
@@ -34,7 +34,7 @@ mmdebstrap:
     # --- In-chroot: build/install as root (avoid systemctl during install)
     - |
       echo "[sonar] make install"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         cd "/home/$IGUSER/sonar"
         # If the project has an explicit build step, this will run it; harmless otherwise.
@@ -44,7 +44,7 @@ mmdebstrap:
     # --- In-chroot: clean up .config
     - |
       echo "[sonar] remove tools/.config"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         rm "/home/$IGUSER/sonar/tools/.config"'
 

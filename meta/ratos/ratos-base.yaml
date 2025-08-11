@@ -24,7 +24,7 @@ mmdebstrap:
     # --- In-chroot: write /etc/pip.conf
     - |
       echo "[ratos-base] write /etc/pip.conf"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         printf "%s\n" \
           "[global]" \
@@ -36,7 +36,7 @@ mmdebstrap:
     # --- In-chroot: create systemd override dir
     - |
       echo "[ratos-base] mkdir getty override dir"
-      chroot "$1" sh -lc '
+      chroot "$1" bash -lc '
         set -eu
         mkdir -p /etc/systemd/system/getty@tty1.service.d
       '
@@ -44,7 +44,7 @@ mmdebstrap:
     # --- In-chroot: write autologin.conf via single-quoted heredoc
     - |
       echo "[ratos-base] write autologin.conf (heredoc)"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<'\''EOF'\''
         [Service]
@@ -56,7 +56,7 @@ mmdebstrap:
     # --- In-chroot: setup NodeSource LTS via script, install nodejs + pnpm
     - |
       echo "[ratos-base] setup NodeSource LTS via script, install nodejs + pnpm"
-      chroot "$1" sh -lc '
+      chroot "$1" bash -lc '
         set -eu
         DEBIAN_FRONTEND=noninteractive apt-get update
         DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg
