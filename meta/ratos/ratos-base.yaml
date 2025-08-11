@@ -3,30 +3,6 @@ name: ratos-base
 mmdebstrap:
   variant: apt
 
-  setup-hooks:
-    - |
-      echo "[ratos-base] add NodeSource LTS repo before package install"
-      set -eu
-      CODENAME="bookworm"
-      if [ -f "$1/etc/os-release" ]; then
-        . "$1/etc/os-release" || true
-        CODENAME="${VERSION_CODENAME:-$CODENAME}"
-      fi
-
-      # Keyrings dir & list dir
-      install -d -m 0755 "$1/etc/apt/keyrings" "$1/etc/apt/sources.list.d"
-
-      # Fetch and dearmor NodeSource key (host curl+gpg)
-      tmpkey="$(mktemp)"
-      curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key > "$tmpkey"
-      gpg --dearmor < "$tmpkey" > "$1/etc/apt/keyrings/nodesource.gpg"
-      rm -f "$tmpkey"
-      chmod 0644 "$1/etc/apt/keyrings/nodesource.gpg"
-
-      # Source list: point signed-by to /etc/apt/keyrings
-      echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x ${CODENAME} main" \
-        > "$1/etc/apt/sources.list.d/nodesource.list"
-
   packages:
     - avahi-daemon
     - bash-completion
@@ -43,8 +19,8 @@ mmdebstrap:
     - libgfortran5
     - unzip
     - curl
-    - nodejs          # from NodeSource LTS repo added above
-    - pnpm            # distro package
+    - gnupg         # needed to dearmor NodeSource key inside chroot
+    - pnpm          # Debian package; independent of NodeSource
 
   customize-hooks:
     # --- In-chroot: write /etc/pip.conf
@@ -77,6 +53,29 @@ mmdebstrap:
         ExecStart=
         ExecStart=-/sbin/agetty --autologin '"$IGUSER"' --noclear %I \$TERM
         EOF
+      '
+
+    # --- In-chroot: add NodeSource LTS repo and install nodejs
+    - |
+      echo "[ratos-base] add NodeSource LTS repo (in-chroot) and install nodejs"
+      chroot "$1" sh -lc '
+        set -eu
+        . /etc/os-release
+        CODENAME="${VERSION_CODENAME:-bookworm}"
+
+        install -d -m 0755 /etc/apt/keyrings /etc/apt/sources.list.d
+        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+          | gpg --dearmor > /etc/apt/keyrings/nodesource.gpg
+        chmod 0644 /etc/apt/keyrings/nodesource.gpg
+
+        echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x ${CODENAME} main" \
+          > /etc/apt/sources.list.d/nodesource.list
+
+        DEBIAN_FRONTEND=noninteractive apt-get update
+        DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
+
+        node -v
+        which pnpm || true
       '
 
     # --- In-chroot: Input Shaper requirements (APT + venv pip)
@@ -115,9 +114,4 @@ mmdebstrap:
       echo "[ratos-base] install headless_nm.service"
       install -Dm 644 "$RPI_TEMPLATES/etc-systemd-system/headless_nm.service" "$1/etc/systemd/system/headless_nm.service"
     - |
-      echo "[ratos-base] install /usr/local/bin/headless_nm"
-      install -Dm 755 "$RPI_TEMPLATES/usr-local-bin/headless_nm" "$1/usr/local/bin/headless_nm"
-    - |
-      echo "[ratos-base] install 070-wifi-powersave.rules"
-      install -Dm 644 "$RPI_TEMPLATES/etc-udev-rules.d/070-wifi-powersave.rules" "$1/etc/udev/rules.d/070-wifi-powersave.rules"
-    - $BDEBSTRAP_HOOKS/enable-units "$1" headless_nm
+      echo "[ratos-base] install /usr/local/bin/headless_nm_
