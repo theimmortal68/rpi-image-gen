@@ -24,21 +24,23 @@ mmdebstrap:
     - liblivemedia-dev
     - xxd
     - libssl-dev
+
   customize-hooks:
     # --- In-chroot: clone repo as target user
     - |
       echo "[crowsnest] clone repo"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" REPO="https://github.com/mainsail-crew/crowsnest.git" bash -lc '
-        set -eu
-        runuser -u "$IGUSER" -- git clone --depth=1 "$REPO" "/home/$IGUSER/crowsnest"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
+        set -euxo pipefail
+        runuser -u "$IGUSER" -- git clone --depth=1 https://github.com/mainsail-crew/crowsnest.git "/home/$IGUSER/crowsnest"
       '
 
-    # --- In-chroot: inject a shim that overrides risky steps when flags are set
+    # --- Host-side: drop shim file directly into rootfs
     - |
-      echo "[crowsnest] write injected_chroot_shim.sh"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
-        set -eu
-        cat > "/home/$IGUSER/crowsnest/tools/injected_chroot_shim.sh" <<'\''SHIM_EOF'\''
+      echo "[crowsnest] write injected_chroot_shim.sh (host-side)"
+      set -eu
+      d="$1/home/${IGconf_device_user1}/crowsnest/tools"
+      install -d -m 0755 "$d"
+      cat > "$d/injected_chroot_shim.sh" <<'SHIM_EOF'
         # Sourced after libs in tools/install.sh; makes installer chroot-friendly.
         : "${CROWSNEST_SKIP_APT_UPDATE:=0}"
         : "${CROWSNEST_SKIP_DEP_INSTALL:=0}"
@@ -70,16 +72,14 @@ mmdebstrap:
           enable_service() { return 0; }
         fi
         SHIM_EOF
-        chmod 0644 "/home/$IGUSER/crowsnest/tools/injected_chroot_shim.sh"
-      '
+      chmod 0644 "$d/injected_chroot_shim.sh"
 
-    # --- In-chroot: sed-insert a single source line to load the shim (minimal)
+    # --- In-chroot: sed-insert a single source line to load the shim
     - |
       echo "[crowsnest] patch install.sh to source shim (minimal)"
       chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
-        set -eu
+        set -euxo pipefail
         f="/home/$IGUSER/crowsnest/tools/install.sh"
-        # Insert right after the last lib source (libs/update_manager.sh)
         sed -i "/libs\/update_manager\.sh\"/a \ \ . \"\${SRC_DIR}\/injected_chroot_shim.sh\"" "$f"
       '
 
@@ -87,19 +87,15 @@ mmdebstrap:
     - |
       echo "[crowsnest] create log dir"
       chroot "$1" bash -lc '
-        set -eu
+        set -euxo pipefail
         install -d -m 0755 /var/log/crowsnest
       '
 
-    # --- In-chroot: lean APT config + warm-up (mitigates mem spikes)
+    # --- In-chroot: lean APT config + warm-up
     - |
-<<<<<<< HEAD
-      echo "[crowsnest] prep lean apt config + warm-up (debug)"
-=======
       echo "[crowsnest] prep lean apt config + warm-up"
->>>>>>> 32a26bf145eaba2b951eb591e77cc4e13d4ae6d3
       chroot "$1" bash -lc '
-        set -eu
+        set -euxo pipefail
         cat >/etc/apt/apt.conf.d/99lean <<EOF
         Acquire::Languages "none";
         Acquire::GzipIndexes "true";
@@ -128,13 +124,13 @@ mmdebstrap:
         CROWSNEST_NO_ENABLE=1 \
         NO_SYSTEMCTL=1 \
         bash -lc '
-          set -eu
+          set -euxo pipefail
           cd "/home/'"${IGconf_device_user1}"'/crowsnest"
           make PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1
           ./tools/install.sh
         '
 
-    # --- Host-side: enable crowsnest service (avoid systemctl inside chroot)
+    # --- Host-side: enable crowsnest service
     - |
       echo "[crowsnest] enable service"
       $BDEBSTRAP_HOOKS/enable-units "$1" crowsnest
