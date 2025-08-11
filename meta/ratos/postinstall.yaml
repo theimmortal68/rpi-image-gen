@@ -1,37 +1,283 @@
 ---
-name: postinstall
+name: ratos-postinstall-postrename-klipperbuild-inbuild
 mmdebstrap:
   variant: apt
+  packages:
+    - bash
+    - curl
+    - procps         # pgrep/pkill
+    - sed
+    - findutils
+    - coreutils
+    # Toolchains for optional Klipper build in chroot
+    - make
+    - gcc
+    - gcc-avr
+    - binutils-avr
+    - avr-libc
+    - gcc-arm-none-eabi
+    - binutils-arm-none-eabi
+    # Auto-resize deps
+    - cloud-guest-utils   # growpart
+    - e2fsprogs           # resize2fs, fsck.ext4
+
   customize-hooks:
-    # --- Host-side: copy remaining support files
+    # --- In-chroot: run RatOS post-install, then stop Configurator & KlipperScreen
     - |
-      echo "[postinstall] copy RatOS support files"
-      install -Dm 644 "$RPI_TEMPLATES/etc-avahi/avahi-daemon.conf" \
-        "$1/etc/avahi/avahi-daemon.conf"
-      install -Dm 644 "$RPI_TEMPLATES/var-log/ratos.log" \
-        "$1/var/log/ratos.log"
-        
-    # --- In-chroot: stop RatOS Configurator if running (final cleanup)
-    - |
-      echo "[postinstall] stop RatOS Configurator if running"
+      echo "[inbuild] ratos-postinstall + stop configurator/KlipperScreen"
       chroot "$1" bash -lc '
-        set -e
-        if [ -f /tmp/ratos_configurator.pid ]; then
-          pid="$(cat /tmp/ratos_configurator.pid || true)"
-          if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-            echo "Stopping configurator (pid: $pid)"
-            kill "$pid" || true
-            # Grace period, then force if needed
-            for i in $(seq 1 10); do
-              kill -0 "$pid" 2>/dev/null || break
-              sleep 0.5
-            done
-            kill -9 "$pid" 2>/dev/null || true
-          else
-            echo "PID file present but process not running"
-          fi
-          rm -f /tmp/ratos_configurator.pid
+        set -euo pipefail
+        IGUSER="${IGconf_device_user1}"
+        USER_HOME="/home/${IGUSER}"
+        POST_SCRIPT="${USER_HOME}/printer_data/config/RatOS/scripts/ratos-post-install.sh"
+
+        # Run post-install if present
+        if [ -x "$POST_SCRIPT" ] || [ -f "$POST_SCRIPT" ]; then
+          echo "[ratos-postinstall] running as $IGUSER"
+          runuser -u "$IGUSER" -- bash -lc "$POST_SCRIPT"
         else
-          echo "No PID file; nothing to stop"
+          echo "[ratos-postinstall] no post-install script found; skipping"
+        fi
+
+        # Stop the configurator gracefully first
+        echo "[ratos-postinstall] stopping configurator (graceful)"
+        set +e
+        curl -fsS "http://localhost:3000/configure/api/trpc/kill" >/dev/null 2>&1
+        set -e
+
+        retries=0
+        while [ "$(pgrep -f -c "ratos-configurator" || echo 0)" -gt 0 ]; do
+          if [ $retries -gt 10 ]; then
+            echo "[ratos-postinstall] configurator did not stop, pkill..."
+            pkill -f "ratos-configurator" || true
+            if [ $retries -gt 12 ]; then
+              echo "[ratos-postinstall] configurator cannot be killed; continuing"
+              break
+            fi
+          fi
+          echo "[ratos-postinstall] waiting for configurator to stop... ${retries}s"
+          sleep 1
+          retries=$((retries + 1))
+        done
+        echo "[ratos-postinstall] configurator stopped (or not running)."
+
+        # Stop KlipperScreen if running
+        if [ "$(pgrep -f -c "KlipperScreen" || echo 0)" -gt 0 ]; then
+          echo "[ratos-postinstall] stopping KlipperScreen"
+          retries=0
+          while [ "$(pgrep -f -c "KlipperScreen" || echo 0)" -gt 0 ]; do
+            if [ $retries -gt 10 ]; then
+              echo "[ratos-postinstall] KlipperScreen did not stop, pkill..."
+              pkill -f "KlipperScreen" || true
+              if [ $retries -gt 12 ]; then
+                echo "[ratos-postinstall] KlipperScreen cannot be killed; continuing"
+                break
+              fi
+            fi
+            echo "[ratos-postinstall] waiting for KlipperScreen to stop... ${retries}s"
+            sleep 1
+            retries=$((retries + 1))
+          done
         fi
       '
+
+    # --- In-chroot: apply "post-rename" path/user fixes (no systemctl calls)
+    - |
+      echo "[inbuild] post-rename fixes (paths, env, perms, links)"
+      chroot "$1" bash -lc '
+        set -euo pipefail
+        IGUSER="${IGconf_device_user1}"
+        DEFAULT_USER="$IGUSER"
+
+        # Change nginx mainsail root path if exists
+        if [ -f /etc/nginx/sites-available/mainsail ]; then
+          sed -i "s|/home/pi/mainsail|/home/${DEFAULT_USER}/mainsail|g" /etc/nginx/sites-available/mainsail || true
+        fi
+
+        # Replace user in common service files if they exist
+        SYSTEMD_DIR="/etc/systemd/system"
+        for svc in moonraker klipper nginx sonar KlipperScreen; do
+          if [ -f "${SYSTEMD_DIR}/${svc}.service" ]; then
+            sed -i "s/pi/${DEFAULT_USER}/g" "${SYSTEMD_DIR}/${svc}.service" || true
+          fi
+        done
+
+        # Replace user in *.env files under printer_data/systemd
+        ENV_DIR="/home/${DEFAULT_USER}/printer_data/systemd"
+        if [ -d "$ENV_DIR" ]; then
+          find "$ENV_DIR" -type f -name "*.env" -exec sed -i "s/pi/${DEFAULT_USER}/g" {} +
+        fi
+
+        # Relocate venv paths inside scripts (fix shebangs/paths)
+        for venv in klippy-env moonraker-env .KlipperScreen-env; do
+          [ -d "/home/${DEFAULT_USER}/${venv}" ] || continue
+          find "/home/${DEFAULT_USER}/${venv}" -name "__pycache__" -type d -exec rm -rf {} + || true
+          grep -iRl "pi/${venv}" "/home/${DEFAULT_USER}/${venv}" 2>/dev/null \
+            | xargs -r sed -i "s|pi/${venv}|${DEFAULT_USER}/${venv}|g"
+        done
+
+        # Patch polkit rules if present
+        for file in \
+          "/etc/polkit-1/rules.d/moonraker.rules" \
+          "/usr/share/polkit-1/rules.d/moonraker.rules" \
+          "/etc/polkit-1/localauthority/50-local.d/10-moonraker.pkla" \
+          "/etc/polkit-1/rules.d/KlipperScreen.rules" \
+          "/usr/share/polkit-1/rules.d/KlipperScreen.rules" \
+          "/etc/polkit-1/localauthority/50-local.d/20-klipperscreen.pkla"
+        do
+          [ -f "$file" ] && sed -i "s/pi/${DEFAULT_USER}/g" "$file" || true
+        done
+
+        # Fix common symlinks
+        BIN_PATH="/usr/local/bin"
+        for bl in sonar; do
+          [ -h "${BIN_PATH}/${bl}" ] && rm -f "${BIN_PATH}/${bl}"
+          find "/home/${DEFAULT_USER}" -type f -iname "${bl}" -exec ln -sf {} "${BIN_PATH}/${bl}" \; || true
+        done
+
+        # Recreate known links if repos exist
+        # moonraker-timelapse
+        if [ -d "/home/${DEFAULT_USER}/moonraker-timelapse" ]; then
+          ln -sf "/home/${DEFAULT_USER}/moonraker-timelapse/component/timelapse.py" "/home/${DEFAULT_USER}/moonraker/moonraker/components/timelapse.py" || true
+          ln -sf "/home/${DEFAULT_USER}/moonraker-timelapse/klipper_macro/timelapse.cfg" "/home/${DEFAULT_USER}/printer_data/config/timelapse.cfg" || true
+        fi
+        # mainsail-config
+        if [ -d "/home/${DEFAULT_USER}/mainsail-config" ]; then
+          ln -sf "/home/${DEFAULT_USER}/mainsail-config/mainsail.cfg" "/home/${DEFAULT_USER}/printer_data/config/mainsail.cfg" || true
+        fi
+        # kiauh helper
+        if [ -d "/home/${DEFAULT_USER}/kiauh" ]; then
+          ln -sf "/home/${DEFAULT_USER}/kiauh/kiauh.sh" "/usr/local/bin/kiauh" || true
+        fi
+
+        # Final perms on home
+        chown -R "${DEFAULT_USER}:${DEFAULT_USER}" "/home/${DEFAULT_USER}" || true
+      '
+
+    # --- In-chroot: build Klipper MCU firmware (no flashing here)
+    - |
+      echo "[inbuild] klipper MCU build (no flash in chroot)"
+      chroot "$1" bash -lc '
+        set -euo pipefail
+        IGUSER="${IGconf_device_user1}"
+        KDIR="/home/${IGUSER}/klipper"
+        CFG_SRC="/home/${IGUSER}/printer_data/config/RatOS/boards/r${IGUSER}/firmware.config"
+
+        if [ ! -d "$KDIR" ]; then
+          echo "[klipper-build] ${KDIR} not found; skipping build."
+          exit 0
+        fi
+
+        # Check minimal toolchain availability
+        if ! command -v make >/dev/null 2>&1; then
+          echo "[klipper-build] make not found; skipping."
+          exit 0
+        fi
+
+        chown -R "${IGUSER}:${IGUSER}" "$KDIR"
+
+        # If firmware.config exists, use it. Build as IGUSER.
+        if [ -f "$CFG_SRC" ]; then
+          runuser -u "$IGUSER" -- bash -lc "
+            set -euo pipefail
+            cd '${KDIR}'
+            cp -f '${CFG_SRC}' .config
+            make clean
+            make olddefconfig
+            make -j\"\$(nproc)\"
+          "
+          echo "[klipper-build] build complete; firmware is in ${KDIR}/out/"
+        else
+          echo "[klipper-build] ${CFG_SRC} not found; skipping build."
+        fi
+      '
+
+    # --- Host-side: install first-boot auto-resize (grow root partition + resize2fs)
+    - |
+      echo "[autoroot] install grow-root first-boot service"
+      set -euo pipefail
+      install -d -m 0755 "$1/usr/local/sbin" "$1/var/lib/firstboot"
+
+      cat > "$1/usr/local/sbin/ratos-grow-root" <<'EOF'
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        STAMP="/var/lib/firstboot/resize-root.done"
+        [ -f "$STAMP" ] && exit 0
+
+        # Figure out the current root device (e.g., /dev/mmcblk0p2 or /dev/sda2)
+        ROOT_SRC="$(findmnt -n -o SOURCE /)"
+        # Bail if it looks like overlay/loop/etc.
+        case "$ROOT_SRC" in
+          /dev/*) ;;
+          *) echo "[autoroot] non-block root ($ROOT_SRC); skipping"; exit 0 ;;
+        esac
+
+        # Extract disk + partition number
+        # Handles mmcblk0p2, nvme0n1p2, sda2
+        if [[ "$ROOT_SRC" =~ ^(/dev/nvme[0-9]+n[0-9]+)p([0-9]+)$ ]]; then
+          DISK="${BASH_REMATCH[1]}"
+          PART="${BASH_REMATCH[2]}"
+        elif [[ "$ROOT_SRC" =~ ^(/dev/mmcblk[0-9]+)p([0-9]+)$ ]]; then
+          DISK="${BASH_REMATCH[1]}"
+          PART="${BASH_REMATCH[2]}"
+        elif [[ "$ROOT_SRC" =~ ^(/dev/[a-z]+)([0-9]+)$ ]]; then
+          DISK="${BASH_REMATCH[1]}"
+          PART="${BASH_REMATCH[2]}"
+        else
+          echo "[autoroot] cannot parse root device: $ROOT_SRC"
+          exit 0
+        fi
+
+        echo "[autoroot] root=$ROOT_SRC disk=$DISK part=$PART"
+
+        # Grow the partition to fill the disk
+        if command -v growpart >/dev/null 2>&1; then
+          growpart "$DISK" "$PART" || {
+            echo "[autoroot] growpart failed (may already be max); continuing"
+          }
+        else
+          echo "[autoroot] growpart not found; skipping"
+          exit 0
+        fi
+
+        # Try online resize for ext4
+        FSTYPE="$(findmnt -n -o FSTYPE / || echo "")"
+        if [ "$FSTYPE" = "ext4" ] || [ "$FSTYPE" = "ext3" ]; then
+          echo "[autoroot] resize2fs on $ROOT_SRC"
+          resize2fs "$ROOT_SRC" || {
+            echo "[autoroot] resize2fs failed"; exit 1;
+          }
+        else
+          echo "[autoroot] unsupported fs '$FSTYPE'; skipping"
+          exit 0
+        fi
+
+        # Stamp done
+        install -d -m 0755 /var/lib/firstboot
+        touch "$STAMP"
+        echo "[autoroot] done"
+        EOF
+      chmod 0755 "$1/usr/local/sbin/ratos-grow-root"
+
+      cat > "$1/etc/systemd/system/ratos-grow-root.service" <<'EOF'
+        [Unit]
+        Description=Grow root partition and filesystem on first boot
+        DefaultDependencies=no
+        After=local-fs-pre.target
+        Before=local-fs.target
+        ConditionPathExists=!/var/lib/firstboot/resize-root.done
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/local/sbin/ratos-grow-root
+        TimeoutStartSec=300
+
+        [Install]
+        WantedBy=local-fs.target
+        EOF
+
+    # --- Enable the auto-resize unit without calling systemctl
+    - |
+      echo "[autoroot] enable service"
+      $BDEBSTRAP_HOOKS/enable-units "$1" ratos-grow-root
