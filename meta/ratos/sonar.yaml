@@ -1,0 +1,54 @@
+---
+name: sonar
+mmdebstrap:
+  variant: apt
+  packages:
+    - git
+    - make
+    - build-essential
+  customize-hooks:
+    # --- In-chroot: clone repo as target user (no idempotence; fails if exists)
+    - |
+      echo "[sonar] clone repo"
+      chroot "$1" env \
+        IGUSER="${IGconf_device_user1}" \
+        REPO="https://github.com/mainsail-crew/sonar.git" \
+        BRANCH="main" \
+        sh -lc '
+          set -eu
+          runuser -u "$IGUSER" -- git clone --depth=1 -b "$BRANCH" "$REPO" "/home/$IGUSER/sonar"'
+
+    # --- In-chroot: write ./tools/.config owned by the user
+    - |
+      echo "[sonar] write tools/.config"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        runuser -u "$IGUSER" -- sh -lc "
+          printf \"%s\n\" \
+            \"BASE_USER=\\\"$IGUSER\\\"\" \
+            \"SONAR_DATA_PATH=\\\"/home/$IGUSER/printer_data\\\"\" \
+            \"SONAR_ADD_SONAR_MOONRAKER=\\\"1\\\"\" \
+            \"SONAR_UNATTENDED=\\\"1\\\"\" \
+            > \"/home/$IGUSER/sonar/tools/.config\""'
+
+    # --- In-chroot: build/install as root (avoid systemctl during install)
+    - |
+      echo "[sonar] make install"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        cd "/home/$IGUSER/sonar"
+        # If the project has an explicit build step, this will run it; harmless otherwise.
+        make VERBOSE=1
+        NO_SYSTEMCTL=1 make install VERBOSE=1'
+
+    # --- In-chroot: clean up .config
+    - |
+      echo "[sonar] remove tools/.config"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        rm "/home/$IGUSER/sonar/tools/.config"'
+
+    # --- Host-side: enable service explicitly
+    - |
+      echo "[sonar] enable service"
+      $BDEBSTRAP_HOOKS/enable-units "$1" sonar
