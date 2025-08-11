@@ -32,29 +32,51 @@ mmdebstrap:
         runuser -u "$IGUSER" -- git clone --depth=1 "$REPO" "/home/$IGUSER/crowsnest"
       '
 
-    # --- In-chroot: prepare lean APT behavior to reduce memory during updates
+    # --- In-chroot: sed-inject patches into tools/install.sh (no full overwrite)
     - |
-      echo "[crowsnest] prep lean apt config"
+      echo "[crowsnest] patch install.sh via sed"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        f="/home/$IGUSER/crowsnest/tools/install.sh"
+
+        # 1) Add skip flag defaults right after the existing CROWSNEST_UNATTENDED default
+        sed -i "/CROWSNEST_UNATTENDED[^\n]*\"0\"/a : \"\${CROWSNEST_SKIP_APT_UPDATE:=0}\"\n: \"\${CROWSNEST_SKIP_DEP_INSTALL:=0}\"\n: \"\${CROWSNEST_NO_ENABLE:=0}\"" "$f"
+
+        # 2) Allow running as root when unattended (chroot builds)
+        sed -i "s/if \[\[ \"\${SUDO_USER}\" = \"root\" \]\]; then/if [[ \"\${SUDO_USER}\" = \"root\" && \"\${CROWSNEST_UNATTENDED}\" != \"1\" ]]; then/" "$f"
+
+        # 3) After sourcing libs, inject function overrides honoring skip flags
+        sed -i "/libs\/update_manager.sh\"/a \
+# -- injected: skip hooks for chroot builds --\\n\
+if [ \"\${CROWSNEST_SKIP_APT_UPDATE:-0}\" = \"1\" ]; then\\n\
+  run_apt_update() { return 0; }\\n\
+fi\\n\
+if [ \"\${CROWSNEST_SKIP_DEP_INSTALL:-0}\" = \"1\" ]; then\\n\
+  shallow_cs_dependencies_check() { return 1; }\\n\
+  link_pkglist_rpi() { :; }\\n\
+  link_pkglist_generic() { :; }\\n\
+  source_pkglist_file() { :; }\\n\
+  install_dependencies() { return 0; }\\n\
+fi\\n\
+if [ \"\${CROWSNEST_NO_ENABLE:-0}\" = \"1\" ]; then\\n\
+  enable_service() { return 0; }\\n\
+fi" "$f"
+      '
+
+    # --- In-chroot: lean APT config + warm-up (mitigates memory spikes)
+    - |
+      echo "[crowsnest] prep lean apt config + warm-up"
       chroot "$1" sh -lc '
         set -eu
         cat >/etc/apt/apt.conf.d/99lean <<EOF
-          Acquire::Languages "none";
-          Acquire::GzipIndexes "true";
-          Acquire::CompressionTypes::Order:: "gz";
-          Acquire::PDiffs "false";
-          APT::Sandbox::User "root";
-          EOF
-      '
-
-    # --- In-chroot: warm up apt lists (with retry) using lean options
-    - |
-      echo "[crowsnest] apt-get update warm-up (lean opts)"
-      chroot "$1" sh -lc '
-        set -eu
+Acquire::Languages "none";
+Acquire::GzipIndexes "true";
+Acquire::CompressionTypes::Order:: "gz";
+Acquire::PDiffs "false";
+APT::Sandbox::User "root";
+EOF
         export DEBIAN_FRONTEND=noninteractive
-        # Clear possibly half-written lists from prior attempts
         rm -rf /var/lib/apt/lists/* || true
-        # First try
         if ! apt-get -o Acquire::Languages=none -o Acquire::CompressionTypes::Order::=gz -o Acquire::PDiffs=false update; then
           echo "[crowsnest] apt-get update failed; retrying in 5s..." >&2
           sleep 5
@@ -62,20 +84,25 @@ mmdebstrap:
         fi
       '
 
-    # --- In-chroot: build (harmless if NOP) and install with noninteractive env
+    # --- In-chroot: build (harmless if NOP) and run installer with skip flags
     - |
-      echo "[crowsnest] make install"
-      chroot "$1" env DEBIAN_FRONTEND=noninteractive sh -lc '
-        set -eu
-        cd "/home/'"${IGconf_device_user1}"'/crowsnest"
-        # Build (if project uses it)
-        make PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1
-        # Install; avoid systemctl from being called by scripts
-        SUDO= NO_SYSTEMCTL=1 CROWSNEST_UNATTENDED=1 CROWSNEST_ADD_CROWSNEST_MOONRAKER=1 \
-          make install PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1
-      '
+      echo "[crowsnest] make install (skip apt/deps, no systemctl)"
+      chroot "$1" env \
+        DEBIAN_FRONTEND=noninteractive \
+        BASE_USER="${IGconf_device_user1}" \
+        CROWSNEST_UNATTENDED=1 \
+        CROWSNEST_SKIP_APT_UPDATE=1 \
+        CROWSNEST_SKIP_DEP_INSTALL=1 \
+        CROWSNEST_NO_ENABLE=1 \
+        NO_SYSTEMCTL=1 \
+        sh -lc '
+          set -eu
+          cd "/home/'"${IGconf_device_user1}"'/crowsnest"
+          make PREFIX=/usr SYSCONFDIR=/etc VERBOSE=1
+          ./tools/install.sh
+        '
 
-    # --- Host-side: enable crowsnest service (unit should be installed by script)
+    # --- Host-side: enable crowsnest service (avoid systemctl inside chroot)
     - |
       echo "[crowsnest] enable service"
       $BDEBSTRAP_HOOKS/enable-units "$1" crowsnest
