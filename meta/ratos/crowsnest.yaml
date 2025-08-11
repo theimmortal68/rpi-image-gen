@@ -38,38 +38,38 @@ mmdebstrap:
       chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
         set -eu
         cat > "/home/$IGUSER/crowsnest/tools/injected_chroot_shim.sh" <<"SHIM_EOF"
-# Sourced after libs in tools/install.sh; makes installer chroot-friendly.
-: "${CROWSNEST_SKIP_APT_UPDATE:=0}"
-: "${CROWSNEST_SKIP_DEP_INSTALL:=0}"
-: "${CROWSNEST_NO_ENABLE:=0}"
-: "${CROWSNEST_DEBUG:=0}"
+        # Sourced after libs in tools/install.sh; makes installer chroot-friendly.
+        : "${CROWSNEST_SKIP_APT_UPDATE:=0}"
+        : "${CROWSNEST_SKIP_DEP_INSTALL:=0}"
+        : "${CROWSNEST_NO_ENABLE:=0}"
+        : "${CROWSNEST_DEBUG:=0}"
 
-# Optional: rich bash xtrace when CROWSNEST_DEBUG=1
-if [ "$CROWSNEST_DEBUG" = "1" ] ; then
-  export PS4='+ ${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-  # send xtrace to FD 9 if available, else stderr
-  if [ -n "${BASH_VERSINFO:-}" ] && [ -w /proc/$$/fd/9 ] 2>/dev/null; then
-    export BASH_XTRACEFD=9
-  fi
-  set -x
-fi
+        # Optional: rich bash xtrace when CROWSNEST_DEBUG=1
+        if [ "$CROWSNEST_DEBUG" = "1" ] ; then
+          export PS4='+ ${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
+          # send xtrace to FD 9 if available, else stderr
+          if [ -n "${BASH_VERSINFO:-}" ] && [ -w /proc/$$/fd/9 ] 2>/dev/null; then
+          export BASH_XTRACEFD=9
+          fi
+          set -x
+        fi
 
-if [ "$CROWSNEST_SKIP_APT_UPDATE" = "1" ]; then
-  run_apt_update() { return 0; }
-fi
+        if [ "$CROWSNEST_SKIP_APT_UPDATE" = "1" ]; then
+          run_apt_update() { return 0; }
+        fi
 
-if [ "$CROWSNEST_SKIP_DEP_INSTALL" = "1" ]; then
-  shallow_cs_dependencies_check() { return 1; } # choose generic path
-  link_pkglist_rpi() { :; }
-  link_pkglist_generic() { :; }
-  source_pkglist_file() { :; }
-  install_dependencies() { return 0; }
-fi
+        if [ "$CROWSNEST_SKIP_DEP_INSTALL" = "1" ]; then
+          shallow_cs_dependencies_check() { return 1; } # choose generic path
+          link_pkglist_rpi() { :; }
+          link_pkglist_generic() { :; }
+          source_pkglist_file() { :; }
+          install_dependencies() { return 0; }
+        fi
 
-if [ "$CROWSNEST_NO_ENABLE" = "1" ]; then
-  enable_service() { return 0; }
-fi
-SHIM_EOF
+        if [ "$CROWSNEST_NO_ENABLE" = "1" ]; then
+          enable_service() { return 0; }
+        fi
+        SHIM_EOF
         chmod 0644 "/home/$IGUSER/crowsnest/tools/injected_chroot_shim.sh"
       '
 
@@ -97,16 +97,16 @@ SHIM_EOF
       chroot "$1" sh -lc '
         set -eu
         cat >/etc/apt/apt.conf.d/99lean <<EOF
-Acquire::Languages "none";
-Acquire::GzipIndexes "true";
-Acquire::CompressionTypes::Order:: "gz";
-Acquire::PDiffs "false";
-APT::Sandbox::User "root";
-# Debug knobs (safe to leave; just makes logs chatty)
-Debug::pkgProblemResolver "1";
-Debug::Acquire::http "true";
-Acquire::Retries "3";
-EOF
+        Acquire::Languages "none";
+        Acquire::GzipIndexes "true";
+        Acquire::CompressionTypes::Order:: "gz";
+        Acquire::PDiffs "false";
+        APT::Sandbox::User "root";
+        # Debug knobs (safe to leave; just makes logs chatty)
+        Debug::pkgProblemResolver "1";
+        Debug::Acquire::http "true";
+        Acquire::Retries "3";
+        EOF
         export DEBIAN_FRONTEND=noninteractive
         rm -rf /var/lib/apt/lists/* || true
         # warm-up update with explicit debug and consistent options
