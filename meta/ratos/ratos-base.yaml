@@ -97,5 +97,10 @@ mmdebstrap:
 
     # --- Host-side: Setup passwordless sudo for ${IGconf_device_user1}
     - |
+      - |
       echo "[ratos-base] making ${IGconf_device_user1} passwordless sudo for easy setup ..."
-      echo -e "${IGconf_device_user1} ALL=(ALL) NOPASSWD:ALL" >> "$1/etc/sudoers.d/010_pi-nopasswd"
+      # Write sudoers drop-in inside chroot
+      cat <<EOF > "$1/etc/sudoers.d/010_pi-nopasswd"
+        ${IGconf_device_user1} ALL=(ALL) NOPASSWD:ALL
+        EOF
+      chmod 0440 "$1/etc/sudoers.d/010_pi-nopasswd"
