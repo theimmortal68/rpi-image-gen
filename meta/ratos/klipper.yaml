@@ -54,7 +54,9 @@ mmdebstrap:
         runuser -u "$IGUSER" -- mkdir "/home/$IGUSER/printer_data/config"
         runuser -u "$IGUSER" -- mkdir "/home/$IGUSER/printer_data/comms"
         runuser -u "$IGUSER" -- mkdir "/home/$IGUSER/printer_data/logs"
+        runuser -u "$IGUSER" -- mkdir "/home/$IGUSER/printer_data/gcode"
         runuser -u "$IGUSER" -- mkdir "/home/$IGUSER/printer_data/systemd'
+        runuser -u "$IGUSER" -- touch "/home/$IGUSER/printer_data/config/printer.cfg"
 
     # --- In-chroot: create virtualenv (no idempotence)
     - |
