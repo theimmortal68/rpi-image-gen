@@ -58,17 +58,10 @@ mmdebstrap:
       echo "[ratos-base] setup NodeSource LTS via script, install nodejs + pnpm"
       chroot "$1" sh -lc '
         set -eu
-        # ensure TLS + tools
         DEBIAN_FRONTEND=noninteractive apt-get update
         DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg
-
-        # NodeSource LTS repo (handles keyring for Bookworm)
         curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
-
-        # install Node.js from NodeSource
         DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
-
-        # install pnpm globally and verify
         [ -d /tmp ] || mkdir /tmp; chmod 777 /tmp
         npm install -g pnpm
         command -v pnpm >/dev/null 2>&1 || { echo "pnpm not found after installation" >&2; exit 1; }
