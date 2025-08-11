@@ -18,9 +18,9 @@ mmdebstrap:
     # --- Host-side: install nginx configs (host copies into rootfs)
     - |
       echo "[mainsail] install nginx configs"
-      install -Dm 644 "$RPI_TEMPLATES/etc-nginx-sites-available/mainsail"          "$1/etc/nginx/sites-available/mainsail"
-      install -Dm 644 "$RPI_TEMPLATES/etc-nginx-conf.d/common_vars.conf"          "$1/etc/nginx/conf.d/common_vars.conf"
-      install -Dm 644 "$RPI_TEMPLATES/etc-nginx-conf.d/upstreams.conf"            "$1/etc/nginx/conf.d/upstreams.conf"
+      install -Dm 644 "$RPI_TEMPLATES/etc-nginx-sites-available/mainsail" "$1/etc/nginx/sites-available/mainsail"
+      install -Dm 644 "$RPI_TEMPLATES/etc-nginx-conf.d/common_vars.conf" "$1/etc/nginx/conf.d/common_vars.conf"
+      install -Dm 644 "$RPI_TEMPLATES/etc-nginx-conf.d/upstreams.conf"   "$1/etc/nginx/conf.d/upstreams.conf"
 
     # --- In-chroot: enable mainsail site (make proper symlink)
     - |
@@ -37,7 +37,7 @@ mmdebstrap:
         set -eu
         sed -i "s/rotate 14/rotate 2/" /etc/logrotate.d/nginx'
 
-    # --- In-chroot: link nginx logs to printer_data/logs (no -f so it fails if exists)
+    # --- In-chroot: link nginx logs to printer_data/logs
     - |
       echo "[mainsail] link logs"
       chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
@@ -48,9 +48,9 @@ mmdebstrap:
     # --- In-chroot: download mainsail zip to user home (as user)
     - |
       echo "[mainsail] download mainsail.zip"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" DOWNLOAD_URL="${DOWNLOAD_URL}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
         set -eu
-        runuser -u "$IGUSER" -- wget -q --show-progress -O "/home/$IGUSER/mainsail.zip" "$DOWNLOAD_URL"'
+        runuser -u "$IGUSER" -- wget -q --show-progress -O "/home/$IGUSER/mainsail.zip" "https://github.com/mainsail-crew/mainsail/releases/latest/download/mainsail.zip"'
 
     # --- In-chroot: create destination dir (no -p; fail if exists), then unzip
     - |
@@ -61,33 +61,30 @@ mmdebstrap:
         runuser -u "$IGUSER" -- unzip "/home/$IGUSER/mainsail.zip" -d "/home/$IGUSER/mainsail"
         rm "/home/$IGUSER/mainsail.zip"'
 
-    # --- In-chroot: add user to www-data group (correct direction)
+    # --- In-chroot: add user to www-data group
     - |
       echo "[mainsail] add user to www-data"
       chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
         set -eu
         usermod -a -G www-data "$IGUSER"'
 
-    # --- In-chroot: ensure group execute on user home (so www-data can traverse)
+    # --- In-chroot: ensure group execute on user home
     - |
       echo "[mainsail] chmod g+x ~"
       chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
         set -eu
         chmod g+x "/home/$IGUSER"'
 
-    # --- In-chroot: clone mainsail-config (no idempotence; fails if dir exists)
+    # --- In-chroot: clone mainsail-config
     - |
       echo "[mainsail] clone mainsail-config"
-      chroot "$1" env IGUSER="${IGconf_device_user1}" CONFIG_REPO="${CONFIG_REPO}" sh -lc '
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
         set -eu
-        runuser -u "$IGUSER" -- git clone --depth=1 "$CONFIG_REPO" "/home/$IGUSER/mainsail-config"'
+        runuser -u "$IGUSER" -- git clone --depth=1 "https://github.com/mainsail-crew/mainsail-config.git" "/home/$IGUSER/mainsail-config"'
 
-    # --- In-chroot: link mainsail.cfg into printer_data (no -f; fail if exists)
+    # --- In-chroot: link mainsail.cfg into printer_data
     - |
       echo "[mainsail] link mainsail.cfg"
       chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
         set -eu
         ln -s "/home/$IGUSER/mainsail-config/mainsail.cfg" "/home/$IGUSER/printer_data/config/mainsail.cfg"'
-env:
-  DOWNLOAD_URL: "https://github.com/mainsail-crew/mainsail/releases/latest/download/mainsail.zip"
-  CONFIG_REPO: "https://github.com/mainsail-crew/mainsail-config.git"
