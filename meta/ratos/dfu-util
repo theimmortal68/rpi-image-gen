@@ -1,0 +1,67 @@
+---
+name: dfu-util
+mmdebstrap:
+  variant: apt
+  packages:
+    # Build/toolchain (kept on image)
+    - git
+    - build-essential
+    - libusb-1.0-0-dev
+    - autoconf
+    - automake
+    - libtool
+    - pkg-config
+
+  customize-hooks:
+    # --- In-chroot: install temporary dependency (pandoc), then remove later
+    - |
+      echo "[dfu-util] install temporary dependency (pandoc)"
+      chroot "$1" sh -lc '
+        set -eu
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update
+        apt-get install -y pandoc
+      '
+
+    # --- In-chroot: clone dfu-util (with fallback) into the target user home
+    - |
+      echo "[dfu-util] clone repository (sourceforge -> gitlab fallback)"
+      chroot "$1" env IGUSER="${IGconf_device_user1}" sh -lc '
+        set -eu
+        cd "/home/$IGUSER"
+        if ! git clone git://git.code.sf.net/p/dfu-util/dfu-util "dfu-util"; then
+          git clone https://gitlab.com/dfu-util/dfu-util.git "dfu-util"
+        fi
+        chown -R "$IGUSER:$IGUSER" "dfu-util"
+      '
+
+    # --- In-chroot: build and install (install goes to /usr/local)
+    - |
+      echo "[dfu-util] build and install"
+      chroot "$1" sh -lc '
+        set -eu
+        cd "/home/${IGconf_device_user1}/dfu-util"
+        ./autogen.sh
+        ./configure
+        make -j"$(nproc)"
+        make install
+      '
+
+    # --- In-chroot: cleanup temporary dependency
+    - |
+      echo "[dfu-util] remove temporary dependency (pandoc)"
+      chroot "$1" sh -lc '
+        set -eu
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get purge -y pandoc || true
+        apt-get autoremove -y || true
+        apt-get clean
+      '
+
+    # --- In-chroot: final ownership pass on user home (paranoia)
+    - |
+      echo "[dfu-util] fix ownership of target user home"
+      chroot "$1" sh -lc '
+        set -eu
+        chown -R "${IGconf_device_user1}:${IGconf_device_user1}" "/home/${IGconf_device_user1}"
+      '
