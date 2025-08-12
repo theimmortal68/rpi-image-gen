@@ -81,7 +81,8 @@ mmdebstrap:
             U="$2"; shift 2
             exec runuser -u "$U" -- "$@"
           fi
-          exec "$@"EOS
+          exec "$@"
+          EOS
         chmod 0755 "$SHIMDIR/sudo"
 
         # systemctl shim: always succeed (no DBus/systemd in chroot)
