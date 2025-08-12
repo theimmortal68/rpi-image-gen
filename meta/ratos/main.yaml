@@ -1,4 +1,3 @@
----
 name: main
 mmdebstrap:
   variant: apt
@@ -59,12 +58,50 @@ mmdebstrap:
         runuser -u "$IGUSER" -- git config --global pull.ff only
       '
 
-    # --- In-chroot: run configurator setup script
+    # --- In-chroot: run configurator setup script with hostname fix + sudo/systemctl shims
     - |
-      echo "[ratos] run configurator setup"
+      echo "[ratos] run configurator setup (with chroot-safe shims)"
       chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
-        set -eu
+        set -euo pipefail
+
+        # Ensure hostname resolves for sudo (prevents "unable to resolve host" noise)
+        HN="$(cat /etc/hostname 2>/dev/null || echo raspberrypi)"
+        if ! grep -qE "^[[:space:]]*127\.0\.1\.1[[:space:]]+$HN(\s|$)" /etc/hosts 2>/dev/null; then
+          echo "127.0.1.1 $HN" >> /etc/hosts
+        fi
+
+        # Create temporary shims so scripts that call sudo/systemctl won’t fail in a chroot
+        SHIMDIR="/tmp/ratos-setup-shims"
+        mkdir -p "$SHIMDIR"
+
+        # sudo shim: support 'sudo -u USER cmd' by translating to runuser; otherwise exec directly
+        cat > "$SHIMDIR/sudo" <<'EOS'
+          #!/bin/sh
+          if [ "$1" = "-u" ] && [ -n "$2" ]; then
+            U="$2"; shift 2
+            exec runuser -u "$U" -- "$@"
+          fi
+          exec "$@"EOS
+        chmod 0755 "$SHIMDIR/sudo"
+
+        # systemctl shim: always succeed (no DBus/systemd in chroot)
+        cat > "$SHIMDIR/systemctl" <<'EOS'
+          #!/bin/sh
+          exit 0
+          EOS
+        chmod 0755 "$SHIMDIR/systemctl"
+
+        export PATH="$SHIMDIR:$PATH"
+
+        # Run the configurator setup as the target user
+        set +e
         runuser -u "$IGUSER" -- bash "/home/$IGUSER/ratos-configurator/app/scripts/setup.sh"
+        RC=$?
+        set -e
+
+        # Clean shims and return the real status
+        rm -rf "$SHIMDIR"
+        exit "$RC"
       '
 
     # --- In-chroot: start configurator in background and wait for readiness
@@ -73,9 +110,6 @@ mmdebstrap:
       chroot "$1" env IGUSER="${IGconf_device_user1}" bash -lc '
         set -eu
         cd "/home/$IGUSER/ratos-configurator/app"
-        # Standard background start
         runuser -u "$IGUSER" -- bash -lc "npm run start & echo \$! > /tmp/ratos_configurator.pid"
-        # Alternative: foreground for debug
-        # runuser -u "$IGUSER" -- bash -lc "npm run start --no-daemon"
         timeout 300 bash -lc '\''until [ "$(curl -s -o /dev/null -w "%{http_code}" localhost:3000)" = "404" ]; do sleep 5; done'\'' || true
       '
