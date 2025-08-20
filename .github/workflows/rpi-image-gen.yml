@@ -1,0 +1,36 @@
+name: Build rpi-image-gen image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ rpi5 ]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install host deps from repo script
+        run: |
+          set -eux
+          sudo apt-get -o Acquire::Retries=3 -o DPkg::Lock::Timeout=600 update
+          sudo ./install_deps.sh
+
+      - name: Enable cross-arch emulation
+        run: |
+          set -eux
+          sudo apt-get -o Acquire::Retries=3 -o DPkg::Lock::Timeout=600 update
+          sudo apt-get -o Acquire::Retries=3 -o DPkg::Lock::Timeout=600 install -y qemu-user-static binfmt-support
+          # Usually auto-enabled; don't fail if it's already enabled or oddly registered
+          sudo update-binfmts --enable qemu-aarch64 || true
+
+      - name: Provide Debian archive signing keys for mmdebstrap
+        run: |
+          set -eux
