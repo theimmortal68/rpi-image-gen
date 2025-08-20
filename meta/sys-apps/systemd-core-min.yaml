@@ -23,8 +23,8 @@ mmdebstrap:
         EOF
 
         # Defer the switch to systemd-resolved stub to first boot via tmpfiles
-        install -d -m 0755 /usr/lib/tmpfiles.d
-        cat > /usr/lib/tmpfiles.d/00-resolved.conf <<EOF
+        install -d -m 0755 /etc/tmpfiles.d
+        cat > /etc/tmpfiles.d/00-resolved.conf <<EOF
         # Create the resolv.conf symlink at boot, when resolved is actually running
         L /etc/resolv.conf - - - - /run/systemd/resolve/stub-resolv.conf
         EOF
