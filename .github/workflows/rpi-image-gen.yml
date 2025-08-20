@@ -3,7 +3,7 @@ name: Build rpi-image-gen image
 on:
   workflow_dispatch:
   push:
-    branches: [ rpi5 ]
+    branches: [ master ]
 
 jobs:
   build:
