@@ -34,3 +34,57 @@ jobs:
       - name: Provide Debian archive signing keys for mmdebstrap
         run: |
           set -eux
+          sudo apt-get -o Acquire::Retries=3 -o DPkg::Lock::Timeout=600 update
+          sudo apt-get -o Acquire::Retries=3 -o DPkg::Lock::Timeout=600 install -y debian-archive-keyring
+          mkdir -p keydir
+          cp /usr/share/keyrings/debian-archive-keyring.gpg keydir/
+          ls -l keydir
+
+      # ------- Optional speed-up: cache APT packages downloaded during the build -------
+      - name: Prepare APT cache dir
+        run: |
+          set -eux
+          mkdir -p "${HOME}/.cache/rpi-image-gen/apt"
+          echo "APT_CACHE_DIR=${HOME}/.cache/rpi-image-gen/apt" >> "$GITHUB_ENV"
+
+      - name: Restore/save APT cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/rpi-image-gen/apt
+          key: ${{ runner.os }}-aptcache-${{ hashFiles('config/**/*.cfg', 'meta/**/*.yaml', 'image/**', 'device/**') }}
+          restore-keys: |
+            ${{ runner.os }}-aptcache-
+
+      - name: Build image
+        env:
+          # Pass APT trust/key dir into rpi-image-gen
+          IGconf_sys_apt_keydir: ${{ github.workspace }}/keydir
+          # Point rpi-image-gen’s APT download cache (mmdebstrap apt archives)
+          IGconf_sys_apt_cache_dir: ${{ env.APT_CACHE_DIR }}
+        run: |
+          set -euxo pipefail
+          ./build.sh -c config/generic64-apt-simple.cfg
+
+      - name: Stage outputs (avoid rootfs permission issues)
+        if: success() || failure()
+        run: |
+          set -eux
+          rm -rf ci_out
+          mkdir -p ci_out
+          shopt -s nullglob
+          for d in work/*/artefacts work/*/logs; do
+            [ -d "$d" ] || continue
+            img="$(basename "$(dirname "$d")")"
+            dest="ci_out/${img}/$(basename "$d")"
+            mkdir -p "$dest"
+            cp -r --no-preserve=mode,ownership,timestamps "$d/." "$dest/"
+          done
+          find ci_out -type f -print || true
+
+      - name: Upload artefacts
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpi-image-gen-output
+          path: ci_out/**
+          if-no-files-found: warn
