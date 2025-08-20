@@ -44,30 +44,3 @@ deploydir="${IGconf_sys_workdir}/deploy"
 # Note that it's possible to specify a directory here and use a post-build hook
 # to create a file (eg tarball) as an additional artefact.
 target="${IGconf_sys_workdir}/rootfs"
-
-# ---------- SAFE DEFAULTS (do not set outputdir here!) ----------
-# Subdir names under work/<image> used by the repo + CI
-artefacts_subdir=artefacts
-logs_subdir=logs
-deploy_subdir=deploy
-
-# Build housekeeping
-preserve_logs=true
-preserve_work=false
-cleanup_after_build=true
-umask=0022
-jobs=4
-
-templates_dir=templates
-use_podman_unshare=true
-
-# Image compression (affects final .img only; does not change dir layout)
-image_compression=xz
-xz_level=6
-xz_threads=0   # 0 = auto, lets xz use all cores
-
-# SBOM + CVE reporting (uses our existing syft.yaml)
-sbom_enable=true
-sbom_formats=spdx json
-sbom_syft_config=syft.yaml
-cve_report_enable=true
