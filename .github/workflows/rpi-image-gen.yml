@@ -12,6 +12,7 @@ jobs:
       contents: read
     env:
       DEBIAN_FRONTEND: noninteractive
+      KS_HELPERS: ${{ github.workspace }}/ks_helpers   # persists for the whole job
 
     steps:
       - name: Checkout
