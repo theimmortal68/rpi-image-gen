@@ -7,34 +7,34 @@ class=pi5
 variant=none
 
 # Default hostname
-hostname=raspberrypi
+hostname=ratos
 
 # A user account with this name will be created on the device
 user1=pi
 
 # Password required to log into the above account. If empty, the account will be locked.
-user1pass=
+user1pass=raspberry
 
 # Default locale
-locale1="en_GB.UTF-8"
+locale1="en_US.UTF-8"
 
 # Default keymap
-keyboard_keymap=gb
+keyboard_keymap=us
 
 # Default keyboard layout
 # debconf-show keyboard-configuration keyboard-configuration/xkb-keymap
-keyboard_layout="English (UK)"
+keyboard_layout="English (US)"
 
 # Default timezone
 # /etc/timezone
-timezone="Europe/London"
+timezone="America/New_York"
 
 # The profile used to construct the device root filesystem
 profile=
 
 # If y, automatically include net-misc/openssh-server in the profile to enable
 # SSH access to the device via user1.
-ssh_user1=n
+ssh_user1=y
 
 # The storage type used by the device. Supported values are sd, emmc or nvme.
 storage_type=sd
