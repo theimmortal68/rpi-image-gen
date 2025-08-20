@@ -8,5 +8,7 @@ rpi/boot-firmware
 rpi/arm64/linux-image-2712
 rpi/user-credentials
 rpi/misc-skel
-sys-apps/systemd-net-min
+#sys-apps/systemd-net-min
+sys-apps/systemd-core-min
+net-misc/networkmanager
 sys-apps/fake-hwclock
