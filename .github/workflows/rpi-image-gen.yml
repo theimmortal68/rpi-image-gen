@@ -2,8 +2,8 @@ name: Build rpi-image-gen image
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ master ]
+  # push:
+  #   branches: [ master ]
 
 jobs:
   build:
@@ -87,5 +87,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rpi-image-gen-output
-          path: ci_out/**/*.img*
+          path: ci_out/**/*.img
           if-no-files-found: warn
