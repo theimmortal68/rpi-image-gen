@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Usage: enable-units-offline <root> <unit1> [unit2 ...]
+# Mirrors `systemctl --root=<root> enable ...` by creating symlinks
+# from each unit’s [Install] → WantedBy= targets under /etc/systemd/system.
+
+set -euo pipefail
+
+root="${1:?need rootfs path}"; shift || true
+
+enable_one() {
+  local unit="$1"
+  local unitfile="$root/lib/systemd/system/$unit"
+
+  if [[ ! -f "$unitfile" ]]; then
+    echo "WARN: $unitfile not found; skipping $unit" >&2
+    return 0
+  fi
+
+  # Extract raw WantedBy= lines from the [Install] section (may be multiple)
+  # Join them, split on space/semicolon/comma into individual targets
+  local targets
+  targets="$(awk '
+    BEGIN { in_install=0 }
+    /^\[Install\]/ { in_install=1; next }
+    /^\[/ && $0 !~ /^\[Install\]/ { in_install=0 }
+    in_install && $1 ~ /^WantedBy=/ {
+      sub(/^WantedBy=/,"",$0);
+      print $0
+    }
+  ' "$unitfile" | tr " ;," "\n" | awk NF)"
+
+  [[ -z "$targets" ]] && return 0
+
+  while IFS= read -r tgt; do
+    local dir="$root/etc/systemd/system/${tgt}.wants"
+    install -d -m 0755 "$dir"
+    ln -sf "/lib/systemd/system/$unit" "$dir/$unit"
+  done <<< "$targets"
+}
+
+# Enable all requested units
+for u in "$@"; do
+  enable_one "$u"
+done
