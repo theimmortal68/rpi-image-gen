@@ -13,3 +13,12 @@ mmdebstrap:
       127.0.0.1   localhost
       127.0.1.1   $IGconf_device_hostname
       EOF
+
+      install -d -m 0755 /etc/skel/.config/micro
+      cat >/etc/skel/.config/micro/settings.json <<'EOF'
+      {
+        "softwrap": true,
+        "tabsize": 2,
+        "autosu": true
+      }
+      EOF
