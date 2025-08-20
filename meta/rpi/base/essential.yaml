@@ -11,6 +11,7 @@ mmdebstrap:
     - bash-completion
     - openssh-client
     - udev
+    - zstd
   customize-hooks:
     - |-
       # Run all actions inside the target rootfs
