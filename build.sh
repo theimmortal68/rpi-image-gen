@@ -363,6 +363,7 @@ fi
    "${ARGS_LAYERS[@]}" \
    "${ENV_ROOTFS[@]}" \
    --force \
+   --verbose \
    --name "$IGconf_image_name" \
    --hostname "$IGconf_device_hostname" \
    --output "$IGconf_sys_outputdir" \
@@ -439,3 +440,17 @@ elif [ -x ${IGIMAGE}/post-image.sh ] ; then
 else
    runh ${IGTOP_IMAGE}/post-image.sh $IGconf_sys_deploydir
 fi
+
+# Compress all raw .img artefacts (use zstd if you prefer faster decompression)
+shopt -s nullglob
+for img in ci_out/*/artefacts/*.img; do
+  # xz: smallest files (slower to decompress)
+  xz -T0 -9 -f "$img"
+  # Or, comment xz out and use zstd instead:
+  # zstd -19 --threads=0 -f "$img"
+done
+
+# (optional) checksums for release integrity
+for f in ci_out/*/artefacts/*.img; do
+  sha256sum "$f" > "$f.sha256"
+done
