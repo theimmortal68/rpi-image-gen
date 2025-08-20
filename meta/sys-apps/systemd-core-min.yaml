@@ -7,31 +7,41 @@ mmdebstrap:
     - systemd-timesyncd
     - systemd-resolved
   customize-hooks:
+    # Build-time DNS + tmpfiles rule
+    - |-
+      set -eu
+      install -d -m 0755 "$1/etc"
+      cat >"$1/etc/resolv.conf" <<'EOF'
+      nameserver 1.1.1.1
+      nameserver 9.9.9.9
+      options edns0
+      EOF
+
+      install -d -m 0755 "$1/etc/tmpfiles.d"
+      cat >"$1/etc/tmpfiles.d/00-resolved.conf" <<'EOF'
+      L /etc/resolv.conf - - - - /run/systemd/resolve/stub-resolv.conf
+      EOF
+
+    # Offline enable of units via your helper
+    - |-
+      set -eu
+      "$KS_HELPERS/enable-units-offline" "$1" \
+        systemd-resolved.service \
+        systemd-timesyncd.service
+
+    # Remaining tweaks inside chroot
     - |-
       chroot "$1" /bin/sh -eu -c '
-        # Enable core services
-        systemctl enable systemd-timesyncd
-        systemctl enable systemd-resolved
-        systemctl enable systemd-journald
-
-        # Build-time DNS: keep a plain resolv.conf so APT works in chroot
-        cat > /etc/resolv.conf <<EOF
-        # Temporary resolv.conf for image build (replaced at boot via tmpfiles)
-        nameserver 1.1.1.1
-        nameserver 9.9.9.9
-        options edns0
-        EOF
-
-        # Defer the switch to systemd-resolved stub to first boot via tmpfiles
-        install -d -m 0755 /etc/tmpfiles.d
-        cat > /etc/tmpfiles.d/00-resolved.conf <<EOF
-        # Create the resolv.conf symlink at boot, when resolved is actually running
-        L /etc/resolv.conf - - - - /run/systemd/resolve/stub-resolv.conf
-        EOF
-
         # Persistent journal
         install -d -m 2755 /var/log/journal
         chown root:systemd-journal /var/log/journal
+
+        # Journald config: rotate at 100MB max
+        install -d -m 0755 /etc/systemd/journald.conf.d
+        cat >/etc/systemd/journald.conf.d/99-rotate.conf <<EOF
+        [Journal]
+        SystemMaxUse=100M
+        EOF
 
         # Keep TTY1 output visible after boot
         install -d -m 0755 /etc/systemd/system/getty@tty1.service.d
