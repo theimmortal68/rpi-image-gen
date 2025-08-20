@@ -5,45 +5,21 @@ mmdebstrap:
     - systemd
     - systemd-sysv
     - systemd-timesyncd
-    - systemd-resolved
   customize-hooks:
-    # First-boot switch to systemd-resolved stub (Debian-standard location).
-    # We intentionally DO NOT modify /etc/resolv.conf during the build.
     - |-
-      set -eu
-      install -d -m 0755 "$1/etc/tmpfiles.d"
-      printf '%s\n' \
-        '# Create resolv.conf symlink at boot, when resolved is running' \
-        'L /etc/resolv.conf - - - - /run/systemd/resolve/stub-resolv.conf' \
-      | install -D -m 0644 /dev/stdin "$1/etc/tmpfiles.d/00-resolved.conf"
-
-    # Offline "enable" of core units via your helper (no systemctl calls).
-    - |-
-      set -eu
-      "$KS_HELPERS/enable-units-offline" "$1" \
-        systemd-resolved.service \
-        systemd-timesyncd.service
-
-    # Remaining tweaks inside the chroot.
-    - |-
+      # Run everything inside the target rootfs
       chroot "$1" /bin/sh -eu -c '
-        # Persistent journal (dir + group) and size cap (~100 MB total).
-        install -d -m 2755 /var/log/journal
-        chown root:systemd-journal /var/log/journal
-        install -d -m 0755 /etc/systemd/journald.conf.d
-        cat >/etc/systemd/journald.conf.d/99-rotate.conf <<EOF
-        [Journal]
-        SystemMaxUse=100M
-        EOF
+        # Enable time sync
+        systemctl enable systemd-timesyncd
 
-        # Keep TTY1 output visible after boot.
+        # Keep TTY1 output visible after boot
         install -d -m 0755 /etc/systemd/system/getty@tty1.service.d
-        cat >/etc/systemd/system/getty@tty1.service.d/noclear.conf <<EOF
+        cat > /etc/systemd/system/getty@tty1.service.d/noclear.conf <<EOF
         [Service]
         TTYVTDisallocate=no
         EOF
 
-        # Neutralize udev default link renames.
+        # Neutralize udev default link renames for predictable names
         install -d -m 0755 /etc/systemd/network
         ln -sf /dev/null /etc/systemd/network/99-default.link
         ln -sf /dev/null /etc/systemd/network/73-usb-net-by-mac.link
