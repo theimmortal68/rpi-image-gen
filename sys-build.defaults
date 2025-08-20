@@ -11,8 +11,7 @@ apt_get_purge=y
 # Root of the directory hierarchy containing rpi-image-gen build artefacts.
 # Note, depending on the system being built, this directory can amount to a
 # substantial amount of consumed disk space.
-#workdir="${IGTOP}/work/${IGconf_image_name}"
-workdir=work
+workdir="${IGTOP}/work/${IGconf_image_name}"
 
 # If a particular collection of keys are required for bdebstrap to download
 # packages from the mirror(s) provided, set the directory containing them here.
@@ -44,8 +43,7 @@ deploydir="${IGconf_sys_workdir}/deploy"
 # the target is a file or a directory.
 # Note that it's possible to specify a directory here and use a post-build hook
 # to create a file (eg tarball) as an additional artefact.
-# target="${IGconf_sys_workdir}/rootfs"
-target=work/rootfs
+target="${IGconf_sys_workdir}/rootfs"
 
 # ---------- SAFE DEFAULTS (do not set outputdir here!) ----------
 # Subdir names under work/<image> used by the repo + CI
@@ -73,8 +71,3 @@ sbom_enable=true
 sbom_formats=spdx json
 sbom_syft_config=syft.yaml
 cve_report_enable=true
-
-# Intentionally NOT setting:
-# - outputdir (build.sh composes work/<image>)
-# - apt_cache_dir or keydir (we pass via workflow env)
-# - version_tag/source_date_epoch (leave to build.sh/CI)
