@@ -1,32 +1,46 @@
-# ===== Known-good sys build defaults (safe baseline) =====
+# rpi-image-gen system build configuration defaults
 
-# Where intermediate and final outputs go (must exist or be creatable).
-workdir=work
-outputdir=work
-target=work/rootfs
+# If you require the use of an APT HTTP proxy, set it using this. The proxy
+# setting will not be included in the image, making it safe to use an
+# `apt-cacher` or similar package for development.
+apt_proxy_http=
 
-# Subdirs used by hooks and the uploader.
-artefacts_subdir=artefacts
-logs_subdir=logs
-deploy_subdir=deploy
+# If y, APT operations in the chroot will purge by default. Refer to apt-get(8)
+apt_get_purge=y
 
-# DO NOT change image settings yet; keep the values that worked.
-# If these diverge, genimage may not write what the workflow expects.
+# Root of the directory hierarchy containing rpi-image-gen build artefacts.
+# Note, depending on the system being built, this directory can amount to a
+# substantial amount of consumed disk space.
+workdir="${IGTOP}/work/${IGconf_image_name}"
 
-# Keep the classic suffix so the uploader finds it.
-image_suffix=img
+# If a particular collection of keys are required for bdebstrap to download
+# packages from the mirror(s) provided, set the directory containing them here.
+# This will be passed to bdebstrap via aptopt Dir::Etc::TrustedParts. If not
+# specified, rpi-image-gen sets this directory and assembles the keys it
+# requires into it.
+# This particular setting of Dir::Etc::TrustedParts will not be included in the
+# image. If using this option, please make sure to install your key(s) into the
+# chroot explicitly if a key contained in this directory points to a location
+# that is not otherwise populated during chroot creation (for example by
+# installing a keyring package).
+apt_keydir=
 
-# Keep no compression until we confirm flow; uploader already handles *.img.*
-image_compression=none
+# Location of all build product artefacts.
+outputdir="${IGconf_sys_workdir}/artefacts"
 
-# The template in pre-image.sh expects these formats.
-device_sector_size=512
-image_boot_part_size=200%
-image_root_part_size=300%
+# Location where final images and assets will be installed to.
+deploydir="${IGconf_sys_workdir}/deploy"
 
-# Leave APT/cache keys as-is (harmless to genimage).
-# Only here for completeness; they do not affect genimage output.
-# apt_cache_dir can be overridden by the workflow env and is optional here.
-# apt_cache_dir=
-# keydir is provided by the workflow step; don’t force it here.
-# keydir=
+# The type of target created by bdebstrap to hold the device filesystem.
+# This argument is passed straight to bdebstrap via --target and can be the
+# path to a directory, the path to a tarball filename, etc. See bdebstrap(1)
+# for further details.
+# If not a directory, rpi-image-gen will terminate immediately after bdebstrap
+# execution completes for the sole reason that subsequent stages (eg post-build
+# hooks and genimage) do not support operating on anything except  a directory.
+# Custom bdebstrap hooks are unaffected by different target types because they
+# execute in bdebstrap context and always operate on the chroot regardless if
+# the target is a file or a directory.
+# Note that it's possible to specify a directory here and use a post-build hook
+# to create a file (eg tarball) as an additional artefact.
+target="${IGconf_sys_workdir}/rootfs"
