@@ -9,16 +9,18 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     permissions:
-      contents: read
+      contents: write
     env:
       DEBIAN_FRONTEND: noninteractive
-      KS_HELPERS: ${{ github.workspace }}/ks_helpers   # persists for the whole job
+      KS_HELPERS: ${{ github.workspace }}/ks_helpers
       MMDEBSTRAP_DEBUG: "1"
       MMDEBSTRAP_APT_GET_EXTRA: "--yes --verbose-versions -o Debug::pkgProblemResolver=1"
-      
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # optional
 
       - name: Install host deps from repo script
         run: |
@@ -31,7 +33,6 @@ jobs:
           set -eux
           sudo apt-get -o Acquire::Retries=3 -o DPkg::Lock::Timeout=600 update
           sudo apt-get -o Acquire::Retries=3 -o DPkg::Lock::Timeout=600 install -y qemu-user-static binfmt-support
-          # Usually auto-enabled; don't fail if it's already enabled or oddly registered
           sudo update-binfmts --enable qemu-aarch64 || true
 
       - name: Provide Debian archive signing keys for mmdebstrap
@@ -43,7 +44,6 @@ jobs:
           cp /usr/share/keyrings/debian-archive-keyring.gpg keydir/
           ls -l keydir
 
-      # ------- Optional speed-up: cache APT packages downloaded during the build -------
       - name: Prepare APT cache dir
         run: |
           set -eux
@@ -60,13 +60,12 @@ jobs:
 
       - name: Build image
         env:
-          # Pass APT trust/key dir into rpi-image-gen
           IGconf_sys_apt_keydir: ${{ github.workspace }}/keydir
-          # Point rpi-image-gen’s APT download cache (mmdebstrap apt archives)
           IGconf_sys_apt_cache_dir: ${{ env.APT_CACHE_DIR }}
         run: |
           set -euxo pipefail
           ./build.sh -c config/generic64-apt-simple.cfg
+          # NOTE: your build.sh should already compress to .img.xz and write .sha256
 
       - name: Stage outputs (avoid rootfs permission issues)
         if: success() || failure()
@@ -84,10 +83,25 @@ jobs:
           done
           find ci_out -type f -print || true
 
-      - name: Upload artefacts
-        if: success() || failure()
-        uses: actions/upload-artifact@v4
+      - name: Verify compressed images exist
+        run: |
+          set -eux
+          shopt -s nullglob
+          files=(ci_out/**/*.img.xz)
+          [ ${#files[@]} -gt 0 ] || { echo "No .img.xz files found"; exit 1; }
+          # ensure sha256 sidecars are there too
+          for f in "${files[@]}"; do
+            [ -f "${f}.sha256" ] || { echo "Missing checksum for $f"; exit 1; }
+          done
+
+      - name: Create/update release with assets
+        uses: ncipollo/release-action@v1
         with:
-          name: rpi-image-gen-output
-          path: ci_out/**/*.img
-          if-no-files-found: warn
+          tag: nightly-${{ github.run_id }}
+          name: Nightly ${{ github.run_id }}
+          allowUpdates: true
+          draft: false
+          prerelease: true
+          artifacts: "ci_out/**/*.img.xz,ci_out/**/*.img.xz.sha256"
+          artifactErrorsFailBuild: true
+          token: ${{ secrets.GITHUB_TOKEN }}
