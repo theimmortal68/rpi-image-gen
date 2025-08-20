@@ -87,5 +87,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rpi-image-gen-output
-          path: ci_out/**
+          path: ci_out/**/*.img*
           if-no-files-found: warn
