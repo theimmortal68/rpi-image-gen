@@ -13,12 +13,22 @@ mmdebstrap:
     - udev
   customize-hooks:
     - |-
-      set -eu
-      update-alternatives --install /usr/bin/editor editor /usr/bin/micro 50
-      update-alternatives --set editor /usr/bin/micro
+      # Run all actions inside the target rootfs
+      chroot "$1" /bin/sh -eu -c '
+        update-alternatives --install /usr/bin/editor editor /usr/bin/micro 50
+        update-alternatives --set editor /usr/bin/micro
+        install -d -m 0755 /etc/profile.d
+        cat >/etc/profile.d/99-editor.sh <<EOF
+        export EDITOR=/usr/bin/micro
+        export VISUAL=/usr/bin/micro
+        EOF
 
-      install -d -m 0755 /etc/profile.d
-      cat >/etc/profile.d/99-editor.sh <<'EOF'
-      export EDITOR=/usr/bin/micro
-      export VISUAL=/usr/bin/micro
-      EOF
+        install -d -m 0755 /etc/skel/.config/micro
+        cat >/etc/skel/.config/micro/settings.json <<'EOF'
+        {
+          "softwrap": true,
+          "tabsize": 2,
+          "autosu": true
+        }
+        EOF
+      '
