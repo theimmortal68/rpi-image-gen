@@ -1,6 +1,7 @@
 ---
 name: ratos-prerequisite
 mmdebstrap:
+  variant: apt
   packages:
     - python3-numpy
     - python3-matplotlib
