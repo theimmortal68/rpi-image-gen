@@ -3,6 +3,8 @@ name: rpi-essential-base
 mmdebstrap:
   packages:
     - ca-certificates
+    - curl
+    - wget
     - iproute2
     - iputils-ping
     - sudo
@@ -10,6 +12,7 @@ mmdebstrap:
     - less
     - bash-completion
     - openssh-client
+    - procps
     - udev
     - zstd
   customize-hooks:
