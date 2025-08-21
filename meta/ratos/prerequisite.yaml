@@ -24,6 +24,14 @@ mmdebstrap:
   customize-hooks:
     - |-
       chroot "$1" /bin/sh -eu -c '
+        # Add piwheels to pip.conf if not already present
+        if [ ! -f /etc/pip.conf ]; then
+          echo "Adding piwheels to pip.conf"
+          printf "%s\n" "[global]" > /etc/pip.conf
+          printf "%s\n" "extra-index-url=https://www.piwheels.org/simple" >> /etc/pip.conf
+          chmod 0644 /etc/pip.conf
+        fi
+
         # Install pnpm globally using npm
         npm install -g pnpm
       '
