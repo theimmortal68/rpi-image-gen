@@ -1,4 +1,4 @@
----
+  ---
 name: networkmanager
 mmdebstrap:
   packages:
@@ -25,27 +25,27 @@ mmdebstrap:
         # Tell NM to manage resolv.conf directly (no systemd-resolved)
         install -d -m 0755 /etc/NetworkManager/conf.d
         cat > /etc/NetworkManager/conf.d/10-dns.conf <<'"'"'CONF'"'"'
-[main]
-dns=default
-rc-manager=file
-CONF
+        [main]
+        dns=default
+        rc-manager=file
+        CONF
 
         # Provide a simple DHCP profile for eth0
         install -d -m 0700 /etc/NetworkManager/system-connections
         cat > /etc/NetworkManager/system-connections/eth0.nmconnection <<'"'"'NMCONF'"'"'
-[connection]
-id=eth0
-type=ethernet
-interface-name=eth0
-autoconnect=true
+        [connection]
+        id=eth0
+        type=ethernet
+        interface-name=eth0
+        autoconnect=true
 
-[ipv4]
-method=auto
+        [ipv4]
+        method=auto
 
-[ipv6]
-addr-gen-mode=stable-privacy
-method=auto
-NMCONF
+        [ipv6]
+        addr-gen-mode=stable-privacy
+        method=auto
+        NMCONF
         chmod 600 /etc/NetworkManager/system-connections/eth0.nmconnection
 
         # Minimal syntax checks so bad files fail the build early
