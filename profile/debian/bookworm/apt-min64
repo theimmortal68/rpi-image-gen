@@ -11,6 +11,7 @@ rpi/misc-skel
 #sys-apps/systemd-net-min
 sys-apps/systemd-core-min
 net-apps/networkmanager
+net-apps/headless_nm
 sys-apps/fake-hwclock
 ratos/prerequisite
 ratos/toolchain
