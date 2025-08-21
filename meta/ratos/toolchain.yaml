@@ -1,0 +1,17 @@
+---
+name: ratos-toolchain
+mmdebstrap:
+  packages:
+    - dfu-util
+    - libusb-dev
+    - libusb-1.0-0
+    - libusb-1.0-0-dev
+    - libncurses-dev
+    - avrdude
+    - gcc-avr
+    - binutils-avr
+    - avr-libc
+    - stm32flash
+    - libnewlib-arm-none-eabi
+    - gcc-arm-none-eabi
+    - binutils-arm-none-eabi
