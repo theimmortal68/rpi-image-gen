@@ -2,7 +2,7 @@
 name: rpi-utils
 mmdebstrap:
   packages:
-#    - raspi-config
+    - raspi-config
     - rpi-eeprom
     - raspi-utils
     - raspi-utils-core
