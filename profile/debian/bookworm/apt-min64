@@ -10,6 +10,7 @@ rpi/user-credentials
 rpi/misc-skel
 #sys-apps/systemd-net-min
 sys-apps/systemd-core-min
-net-misc/networkmanager
+net-apps/networkmanager
 sys-apps/fake-hwclock
-net-misc/openssh-server
+net-apps/openssh-server
+sys-apps/finalize-upgrade

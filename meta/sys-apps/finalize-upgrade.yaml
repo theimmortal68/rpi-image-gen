@@ -1,0 +1,15 @@
+---
+name: finalize-upgrade
+mmdebstrap:
+  customize-hooks:
+    - |-
+      chroot "$1" /bin/sh -eu -c '
+        echo "[finalize-upgrade] starting"
+        apt-get update
+        DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade
+        apt-get -y autoremove --purge
+        apt-get clean
+        # marker so logs prove this ran last
+        date -u +"%Y-%m-%dT%H:%M:%SZ" > /root/.finalize-upgrade-done
+        echo "[finalize-upgrade] done"
+      '
