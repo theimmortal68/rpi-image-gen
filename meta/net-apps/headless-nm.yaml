@@ -1,6 +1,7 @@
 ---
 name: headless-nm
 mmdebstrap:
+  variant: apt
   packages: []
   customize-hooks:
     - |-
