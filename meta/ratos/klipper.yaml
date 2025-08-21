@@ -2,60 +2,26 @@
 name: ratos-klipper
 mmdebstrap:
   variant: apt
-  packages: []   # relies on your prerequisite/toolchain layers for git, python3, virtualenv, python3-pip, etc.
+  packages: []   # git, python3, virtualenv, pip, etc. come from your prerequisite/toolchain layers
   customize-hooks:
-    # --- In-chroot: run user-scoped actions as ${IGconf_device_user1} ---
-    - |-
-      chroot "$1" /bin/sh -eu -c '
-        USER="${IGconf_device_user1}"
-        HOME="/home/${IGconf_device_user1}"
-        ENV_DIR="${HOME}/klippy-env"
+    # --- Clone Kalico (Klipper fork) as the device user
+    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; HOME=/home/$IGconf_device_user1; cd \\"$HOME\\"; runuser -u \\"$USER\\" -- git clone --depth 1 --branch bleeding-edge-v2 https://github.com/KalicoCrew/kalico klipper"'
 
-        cd "$HOME"
+    # --- Create printer_data hierarchy (owned by the device user)
+    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; HOME=/home/$IGconf_device_user1; runuser -u \\"$USER\\" -- install -d \\"$HOME/printer_data\\" \\"$HOME/printer_data/config\\" \\"$HOME/printer_data/comms\\" \\"$HOME/printer_data/logs\\" \\"$HOME/printer_data/systemd\\""'
 
-        # Require pip to be present (fail fast if the prerequisite layer wasn't applied)
-        if ! python3 -m pip --version >/dev/null 2>&1; then
-          echo "ERROR: python3-pip is required but not available. Ensure ratos-prerequisite.yaml is applied before this layer." >&2
-          exit 1
-        fi
+    # --- Python env for Klipper under ${ENV_DIR} (/home/${IGconf_device_user1}/klippy-env)
+    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; HOME=/home/$IGconf_device_user1; ENV_DIR=/home/$IGconf_device_user1/klippy-env; runuser -u \\"$USER\\" -- virtualenv -p python3 \\"$ENV_DIR\\""'
+    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; HOME=/home/$IGconf_device_user1; ENV_DIR=/home/$IGconf_device_user1/klippy-env; runuser -u \\"$USER\\" -- \\"$ENV_DIR/bin/pip\\" install -r \\"$HOME/klipper/scripts/klippy-requirements.txt\\""'
+    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; ENV_DIR=/home/$IGconf_device_user1/klippy-env; runuser -u \\"$USER\\" -- \\"$ENV_DIR/bin/pip\\" install numpy"'
 
-        # Clone Kalico (klipper fork) into ~/klipper (will fail if it already exists, by design)
-        runuser -u "$USER" -- git clone --depth 1 --branch bleeding-edge-v2 https://github.com/KalicoCrew/kalico klipper
+    # --- Install systemd unit + env file (host-side copy), then fix ownership of the env
+    - 'install -d -m 0755 "$1/etc/systemd/system"'
+    - 'install -m 0644 "$RPI_TEMPLATES/klipper.service" "$1/etc/systemd/system/klipper.service"'
+    - 'install -d -m 0755 "$1/home/$IGconf_device_user1/printer_data/systemd"'
+    - 'install -m 0644 "$RPI_TEMPLATES/klipper.env" "$1/home/$IGconf_device_user1/printer_data/systemd/klipper.env"'
+    - 'chroot "$1" sh -eu -c "chown $IGconf_device_user1:$IGconf_device_user1 /home/$IGconf_device_user1/printer_data/systemd/klipper.env"'
 
-        # Create printer_data hierarchy
-        runuser -u "$USER" -- mkdir -p \
-          "$HOME/printer_data" \
-          "$HOME/printer_data/config" \
-          "$HOME/printer_data/comms" \
-          "$HOME/printer_data/logs" \
-          "$HOME/printer_data/systemd"
-
-        # Python env for Klipper
-        runuser -u "$USER" -- virtualenv -p python3 "$ENV_DIR"
-        runuser -u "$USER" -- "$ENV_DIR/bin/pip" install -r "$HOME/klipper/scripts/klippy-requirements.txt"
-        runuser -u "$USER" -- "$ENV_DIR/bin/pip" install numpy
-      '
-
-    # --- Host-side: install service + env file into the rootfs, then enable unit ---
-    - |-
-      /bin/sh -eu -c '
-        ROOT="$1"
-        USER="${IGconf_device_user1}"
-        HOME="/home/${IGconf_device_user1}"
-
-        # Install systemd unit
-        install -d -m 0755 "$ROOT/etc/systemd/system"
-        install -m 0644 "${RPI_TEMPLATES}/klipper.service" "$ROOT/etc/systemd/system/klipper.service"
-
-        # Install environment file into the user tree (copy from templates on host)
-        install -d -m 0755 "$ROOT${HOME}/printer_data/systemd"
-        install -m 0644 "${RPI_TEMPLATES}/klipper.env" "$ROOT${HOME}/printer_data/systemd/klipper.env"
-
-        # Ensure the env file is owned by the user (host-side copy lands as root)
-        chroot "$ROOT" /bin/sh -eu -c "
-          chown ${IGconf_device_user1}:${IGconf_device_user1} ${HOME}/printer_data/systemd/klipper.env
-        "
-
-        # Enable the service (helper expects rootfs as $1)
-        "${BDEBSTRAP_HOOKS}/enable-units" "$ROOT" klipper
-      '
+    # --- Enable the service without systemctl (create wants/ symlink)
+    - 'install -d -m 0755 "$1/etc/systemd/system/multi-user.target.wants"'
+    - 'ln -sfn ../klipper.service "$1/etc/systemd/system/multi-user.target.wants/klipper.service"'
