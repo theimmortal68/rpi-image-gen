@@ -1,0 +1,56 @@
+---
+name: ratos-klipper
+mmdebstrap:
+  packages: []   # relies on your prerequisite/toolchain layers for git, python3, virtualenv, etc.
+  customize-hooks:
+    # --- In-chroot: run user-scoped actions as ${IGconf_device_user1} ---
+    - |-
+      chroot "$1" /bin/sh -eu -c '
+        set -o pipefail
+
+        USER="${IGconf_device_user1}"
+        HOME="/home/${IGconf_device_user1}"
+        ENV_DIR="${HOME}/klippy-env"
+
+        cd "$HOME"
+
+        # Clone Kalico (klipper fork) into ~/klipper (fails if already exists, by design)
+        runuser -u "$USER" -- git clone --depth 1 --branch bleeding-edge-v2 https://github.com/KalicoCrew/kalico klipper
+
+        # Create printer_data hierarchy (no idempotence checks; -p is fine)
+        runuser -u "$USER" -- mkdir -p \
+          "$HOME/printer_data" \
+          "$HOME/printer_data/config" \
+          "$HOME/printer_data/comms" \
+          "$HOME/printer_data/logs" \
+          "$HOME/printer_data/systemd"
+
+        # Python env for Klipper: ensure ENV_DIR matches where we install
+        runuser -u "$USER" -- virtualenv -p python3 "$ENV_DIR"
+        runuser -u "$USER" -- "$ENV_DIR/bin/pip" install -r "$HOME/klipper/scripts/klippy-requirements.txt"
+        runuser -u "$USER" -- "$ENV_DIR/bin/pip" install numpy
+      '
+
+    # --- Host-side: install service + env file into the rootfs, then enable unit ---
+    - |-
+      /bin/sh -eu -c '
+        ROOT="$1"
+        USER="${IGconf_device_user1}"
+        HOME="/home/${IGconf_device_user1}"
+
+        # Install systemd unit
+        install -d -m 0755 "$ROOT/etc/systemd/system"
+        install -m 0644 "${RPI_TEMPLATES}/klipper/klipper.service" "$ROOT/etc/systemd/system/klipper.service"
+
+        # Install environment file into the user tree (copy from templates on host)
+        install -d -m 0755 "$ROOT${HOME}/printer_data/systemd"
+        install -m 0644 "${RPI_TEMPLATES}/klipper/klipper.env" "$ROOT${HOME}/printer_data/systemd/klipper.env"
+
+        # Ensure the env file is owned by the user (host-side copy lands as root)
+        chroot "$ROOT" /bin/sh -eu -c "
+          chown ${IGconf_device_user1}:${IGconf_device_user1} ${HOME}/printer_data/systemd/klipper.env
+        "
+
+        # Enable the service (your helper expects rootfs as $1)
+        "${BDEBSTRAP_HOOKS}/enable-units" "$ROOT" klipper
+      '
