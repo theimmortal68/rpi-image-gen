@@ -12,5 +12,4 @@ rpi/misc-skel
 sys-apps/systemd-core-min
 net-apps/networkmanager
 sys-apps/fake-hwclock
-net-apps/openssh-server
 sys-apps/finalize-upgrade

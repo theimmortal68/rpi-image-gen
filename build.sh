@@ -324,9 +324,13 @@ fi
 
 # Auto-selected layers
 if igconf_isy device_ssh_user1 ; then
-   layer_push auto net-misc/openssh-server
+   layer_push auto net-apps/openssh-server
 fi
 
+# Ensure finalize-upgrade runs LAST (after any auto-appended layers like SSH)
+# This assumes you have meta/sys-apps/finalize-upgrade.yaml in your repo.
+# If you keep metas in an external namespace, layer_push will resolve those too.
+layer_push auto sys-apps/finalize-upgrade
 
 # hook execution
 runh()
