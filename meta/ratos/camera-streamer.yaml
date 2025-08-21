@@ -1,0 +1,24 @@
+---
+name: ratos-camera-ustreamer
+mmdebstrap:
+  packages:
+    - ustreamer           # MJPEG HTTP streamer for V4L2 devices
+    - v4l-utils           # v4l2-ctl, media-ctl etc.
+  customize-hooks:
+    - |-
+      chroot "$1" /bin/sh -eu -c '
+        # Access to camera/video
+        for g in video render input i2c gpio; do
+          adduser "${IGconf_device_user1}" "$g"
+        done
+
+        # Autoload i2c-dev (harmless if not used)
+        install -d -m 0755 /etc/modules-load.d
+        printf "%s\n" "i2c-dev" > /etc/modules-load.d/i2c.conf
+
+        # Optional: make camera auto-detect explicit if using Pi firmware config
+        if [ -e /boot/firmware/config.txt ]; then
+          printf "%s\n" "" "# ratos: enable camera auto-detect for CSI modules" "camera_auto_detect=1" >> /boot/firmware/config.txt
+        fi
+      '
+      
