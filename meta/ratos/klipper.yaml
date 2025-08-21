@@ -1,6 +1,7 @@
 ---
 name: ratos-klipper
 mmdebstrap:
+  variant: apt
   packages: []   # relies on your prerequisite/toolchain layers for git, python3, virtualenv, python3-pip, etc.
   customize-hooks:
     # --- In-chroot: run user-scoped actions as ${IGconf_device_user1} ---
