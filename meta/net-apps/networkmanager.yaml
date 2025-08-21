@@ -6,23 +6,12 @@ mmdebstrap:
   customize-hooks:
     - |-
       chroot "$1" /bin/sh -eu -c '
-        # Disable competing stack if present
+        # Disable competing stacks if present
         systemctl disable systemd-networkd 2>/dev/null || true
         systemctl disable systemd-resolved 2>/dev/null || true
-        systemctl mask systemd-resolved 2>/dev/null || true
+        systemctl mask    systemd-resolved 2>/dev/null || true
 
-        # Ensure /etc/resolv.conf is a normal file (not the resolved stub symlink)
-        if [ -L /etc/resolv.conf ]; then
-          rm -f /etc/resolv.conf
-        fi
-        : > /etc/resolv.conf
-        chown root:root /etc/resolv.conf
-        chmod 0644 /etc/resolv.conf
-
-        # Enable NetworkManager
-        systemctl enable NetworkManager || true
-
-        # Tell NM to manage resolv.conf directly (no systemd-resolved)
+        # NetworkManager DNS settings (no systemd-resolved)
         install -d -m 0755 /etc/NetworkManager/conf.d
         cat > /etc/NetworkManager/conf.d/10-dns.conf <<'"'"'CONF'"'"'
         [main]
@@ -30,7 +19,7 @@ mmdebstrap:
         rc-manager=file
         CONF
 
-        # Provide a simple DHCP profile for eth0
+        # Simple DHCP profile for eth0
         install -d -m 0700 /etc/NetworkManager/system-connections
         cat > /etc/NetworkManager/system-connections/eth0.nmconnection <<'"'"'NMCONF'"'"'
         [connection]
@@ -47,11 +36,5 @@ mmdebstrap:
         method=auto
         NMCONF
         chmod 600 /etc/NetworkManager/system-connections/eth0.nmconnection
-
-        # Minimal syntax checks so bad files fail the build early
-        awk '"'"'BEGIN{e=0} /^\[/ || /^[[:alnum:]_.-]+=/ || /^[[:space:]]*#/ {next} {print "BAD:",FILENAME":"NR":",$0; e=1} END{exit e}'"'"' \
-          /etc/NetworkManager/conf.d/10-dns.conf
-
-        awk '"'"'BEGIN{e=0} /^\[/ || /^[[:alnum:]_.-]+=/ || /^[[:space:]]*#/ {next} {print "BAD:",FILENAME":"NR":",$0; e=1} END{exit e}'"'"' \
-          /etc/NetworkManager/system-connections/eth0.nmconnection
       '
+    - $BDEBSTRAP_HOOKS/enable-units "$1" NetworkManager
