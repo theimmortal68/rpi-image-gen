@@ -1,0 +1,27 @@
+---
+name: ratos-prerequisite
+mmdebstrap:
+  packages:
+    - python3-numpy
+    - python3-matplotlib
+    - python3-opencv
+    - python3-serial
+    - virtualenv
+    - python3-dev
+    - libffi-dev
+    - build-essential
+    - libatlas3-base
+    - libatlas-base-dev
+    - libgfortran5
+    - nodejs
+    - git
+    - pkg-config
+  customize-hooks:
+    - |-
+      chroot "$1" /bin/sh -eu -c '
+        # Ensure latest numpy from pip
+        python3 -m pip install --no-cache-dir --upgrade numpy
+
+        # Install pnpm globally using npm
+        npm install -g pnpm
+      '
