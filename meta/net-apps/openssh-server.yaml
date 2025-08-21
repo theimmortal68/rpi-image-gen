@@ -16,14 +16,6 @@ mmdebstrap:
     - |-
       if igconf isy meta_sshd_pubkey_only ; then
          mkdir -p $1/etc/ssh/sshd_config.d
-         cat <<- 'EOCHROOT' > $1/etc/ssh/sshd_config.d/01pubkey-only.conf
-      PermitRootLogin no
-      ChallengeResponseAuthentication no
-      PasswordAuthentication no
-      GSSAPIAuthentication no
-      UsePAM yes
-      PubkeyAuthentication yes
-      AuthenticationMethods publickey
-      EOCHROOT
+         printf %s\n "      PermitRootLogin no" "      ChallengeResponseAuthentication no" "      PasswordAuthentication no" "      GSSAPIAuthentication no" "      UsePAM yes" "      PubkeyAuthentication yes" "      AuthenticationMethods publickey" > $1/etc/ssh/sshd_config.d/01pubkey-only.conf
       fi
     - $BDEBSTRAP_HOOKS/enable-units "$1" ssh
