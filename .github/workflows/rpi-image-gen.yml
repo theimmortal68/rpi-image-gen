@@ -13,6 +13,7 @@ jobs:
     env:
       DEBIAN_FRONTEND: noninteractive
       KS_HELPERS: ${{ github.workspace }}/ks_helpers
+      DIST_NAME: ratos
 
     steps:
       - name: Checkout
