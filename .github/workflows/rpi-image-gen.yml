@@ -13,7 +13,7 @@ jobs:
     env:
       DEBIAN_FRONTEND: noninteractive
       KS_HELPERS: ${{ github.workspace }}/ks_helpers
-      
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,6 +42,7 @@ jobs:
           cp /usr/share/keyrings/debian-archive-keyring.gpg keydir/
           ls -l keydir
 
+      # Optional: cache apt archives used by mmdebstrap
       - name: Prepare APT cache dir
         run: |
           set -eux
@@ -63,16 +64,17 @@ jobs:
         run: |
           set -euxo pipefail
           ./build.sh -c config/generic64-apt-simple.cfg
-          # NOTE: your build.sh should already compress to .img.xz and write .sha256
+          # post-image.sh already writes compressed .zst files to work/*/deploy/
 
-      - name: Stage outputs (avoid rootfs permission issues)
-        if: success() || failure()
+      - name: Stage outputs (runner-owned; no root perms)
+        if: always()
         run: |
           set -eux
           rm -rf ci_out
           mkdir -p ci_out
           shopt -s nullglob
-          for d in work/*/artefacts work/*/logs; do
+          # copy deploy and logs; artefacts are uncompressed/raw, deploy has .zst
+          for d in work/*/deploy work/*/logs; do
             [ -d "$d" ] || continue
             img="$(basename "$(dirname "$d")")"
             dest="ci_out/${img}/$(basename "$d")"
@@ -81,21 +83,20 @@ jobs:
           done
           find ci_out -type f -print || true
 
-      - name: Compress and checksum
+      - name: Create checksums for .img.zst
         run: |
           set -eux
-          shopt -s nullglob
-          for img in ci_out/*/artefacts/*.img; do
-            xz -T0 -9 -f "$img"
-            sha256sum "${img}.xz" > "${img}.xz.sha256"
+          shopt -s nullglob globstar
+          for f in ci_out/**/deploy/*.img.zst; do
+            sha256sum "$f" > "${f}.sha256"
           done
 
-      - name: Verify compressed images exist
+      - name: Verify .img.zst and .sha256 exist
         run: |
           set -eux
-          shopt -s nullglob globstar   # ← add globstar
-          files=(ci_out/**/*.img.xz)
-          [ ${#files[@]} -gt 0 ] || { echo "No .img.xz files found"; exit 1; }
+          shopt -s nullglob globstar
+          files=(ci_out/**/deploy/*.img.zst)
+          [ ${#files[@]} -gt 0 ] || { echo "No .img.zst files found"; exit 1; }
           for f in "${files[@]}"; do
             [ -f "${f}.sha256" ] || { echo "Missing checksum for $f"; exit 1; }
           done
@@ -108,6 +109,7 @@ jobs:
           allowUpdates: true
           draft: false
           prerelease: true
-          artifacts: "ci_out/**/*.img.xz,ci_out/**/*.img.xz.sha256"
+          # Only publish the compressed image + checksum
+          artifacts: "ci_out/**/deploy/*.img.zst,ci_out/**/deploy/*.img.zst.sha256"
           artifactErrorsFailBuild: true
           token: ${{ secrets.GITHUB_TOKEN }}
