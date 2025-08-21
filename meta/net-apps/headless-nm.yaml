@@ -21,8 +21,8 @@ mmdebstrap:
         install -m 0644 "${RPI_TEMPLATES}/headless-nm/WiFi-README.txt" \
           "$BOOT_PATH/WiFi-README.txt"
 
-        # # Replace OS_NAME placeholder in WiFi README
-        # sed -i "s|OS_NAME|${DIST_NAME}|g" "$BOOT_PATH/WiFi-README.txt"
+        # Replace OS_NAME placeholder in WiFi README
+        sed -i "s|OS_NAME|${DIST_NAME}|g" "$BOOT_PATH/WiFi-README.txt"
 
         # # Install systemd service file
         # install -d -m 0755 "$ROOT/etc/systemd/system"
