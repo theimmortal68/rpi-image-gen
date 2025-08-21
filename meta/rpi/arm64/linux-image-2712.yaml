@@ -3,6 +3,7 @@ name: rpi-linux-2712
 env:
   INITRD: "No"
 mmdebstrap:
+  variant: apt
   architectures:
     - arm64
   packages:

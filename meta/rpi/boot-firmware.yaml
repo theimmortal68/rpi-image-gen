@@ -1,6 +1,7 @@
 ---
 name: rpi-boot-firmware
 mmdebstrap:
+  variant: apt
   packages:
     - raspi-firmware
   customize-hooks:

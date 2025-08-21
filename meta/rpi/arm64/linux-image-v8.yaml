@@ -1,8 +1,10 @@
+
 ---
 name: rpi-linux-v8
 env:
   INITRD: "No"
 mmdebstrap:
+  variant: apt
   architectures:
     - arm64
   packages:

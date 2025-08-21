@@ -1,6 +1,7 @@
 ---
 name: finalize-upgrade
 mmdebstrap:
+  variant: apt
   customize-hooks:
     - |-
       chroot "$1" /bin/sh -eu -c '

@@ -1,6 +1,7 @@
 ---
 name: rpi-essential-base
 mmdebstrap:
+  variant: apt
   packages:
     - ca-certificates
     - curl

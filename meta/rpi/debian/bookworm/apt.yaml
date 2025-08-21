@@ -1,6 +1,7 @@
 ---
 name: debian-bookworm-rpi
 mmdebstrap:
+  variant: apt
   mirrors:
     - deb http://archive.raspberrypi.com/debian bookworm main
   packages:

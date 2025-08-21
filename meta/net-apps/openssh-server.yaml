@@ -1,6 +1,7 @@
 ---
 name: openssh server
 mmdebstrap:
+  variant: apt
   packages:
     - openssh-server
   customize-hooks:

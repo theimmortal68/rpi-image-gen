@@ -1,6 +1,7 @@
 ---
 name: systemd-net-min
 mmdebstrap:
+  variant: apt
   packages:
     - systemd
     - systemd-sysv

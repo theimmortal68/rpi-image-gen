@@ -1,6 +1,7 @@
 ---
 name: systemd-core-min
 mmdebstrap:
+  variant: apt
   packages:
     - systemd
     - systemd-sysv

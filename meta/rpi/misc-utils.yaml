@@ -1,6 +1,7 @@
 ---
 name: rpi-utils
 mmdebstrap:
+  variant: apt
   packages:
     - raspi-config
     - rpi-eeprom

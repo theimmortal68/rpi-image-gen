@@ -1,6 +1,7 @@
 ---
 name: fake-hwclock
 mmdebstrap:
+  variant: apt
   packages:
     - fake-hwclock
   customize-hooks:
