@@ -4,37 +4,27 @@ mmdebstrap:
   variant: apt
   packages: []
   customize-hooks:
-    - |-
-      /bin/sh -eu -c '
-        # mmdebstrap may pass ROOT as $0 (host) or $1 (chroot). Support both.
-        ROOT="${1:-$0}"
-
-        # Determine boot path
-        if [ -d "$ROOT/boot/firmware" ]; then
-          BOOT_PATH="$ROOT/boot/firmware"
-        else
-          BOOT_PATH="$ROOT/boot"
-        fi
-
-        # Install templates into boot partition
-        install -m 0644 "${RPI_TEMPLATES}/headless-nm/headless_nm.txt.template" \
-          "$BOOT_PATH/headless_nm.txt.template"
-        install -m 0644 "${RPI_TEMPLATES}/headless-nm/WiFi-README.txt" \
-          "$BOOT_PATH/WiFi-README.txt"
-
-        # Replace OS_NAME placeholder in WiFi README
-        sed -i "s|OS_NAME|${DIST_NAME}|g" "$BOOT_PATH/WiFi-README.txt"
-
-        # Install systemd service file
-        install -d -m 0755 "$ROOT/etc/systemd/system"
-        install -m 0644 "${RPI_TEMPLATES}/headless-nm/headless_nm.service" \
-          "$ROOT/etc/systemd/system/headless_nm.service"
-
-        # Install headless_nm script
-        install -d -m 0755 "$ROOT/usr/local/bin"
-        install -m 0755 "${RPI_TEMPLATES}/headless-nm/headless_nm" \
-          "$ROOT/usr/local/bin/headless_nm"
-
+    # Pick boot path (prefer /boot/firmware if present)
+    - 'if [ -d "$1/boot/firmware" ]; then BOOT_PATH="$1/boot/firmware"; else BOOT_PATH="$1/boot"; fi; echo "$BOOT_PATH" > "$1/.boot_path_tmp"'
+    # Read back the path (keeps subsequent lines simple)
+    - 'BOOT_PATH="$(cat "$1/.boot_path_tmp")" && rm -f "$1/.boot_path_tmp"'
+    # Install boot templates
+    - 'install -d -m 0755 "$BOOT_PATH"'
+    - 'install -m 0644 "$RPI_TEMPLATES/headless-nm/headless_nm.txt.template" "$BOOT_PATH/headless_nm.txt.template"'
+    - 'install -m 0644 "$RPI_TEMPLATES/headless-nm/WiFi-README.txt" "$BOOT_PATH/WiFi-README.txt"'
+    # Replace OS_NAME placeholder in WiFi README (fallback to "Debian" if DIST_NAME unset)
+    - 'sed -i "s|OS_NAME|${DIST_NAME:-Debian}|g" "$BOOT_PATH/WiFi-README.txt"'
+    # Install systemd service + script
+    - 'install -d -m 0755 "$1/etc/systemd/system"'
+    - 'install -m 0644 "$RPI_TEMPLATES/headless-nm/headless_nm.service" "$1/etc/systemd/system/headless_nm.service"'
+    - 'install -d -m 0755 "$1/usr/local/bin"'
+    - 'install -m 0755 "$RPI_TEMPLATES/headless-nm/headless_nm" "$1/usr/local/bin/headless_nm"'
+    # Install Wi-Fi powersave udev rule
+    - 'install -d -m 0755 "$1/etc/udev/rules.d"'
+    - 'install -m 0644 "$RPI_TEMPLATES/udev/070-wifi-powersave.rules" "$1/etc/udev/rules.d/070-wifi-powersave.rules"'
+    # Enable the service without systemctl (create wants/ symlink)
+    - 'install -d -m 0755 "$1/etc/systemd/system/multi-user.target.wants"'
+    - 'ln -sfn ../headless_nm.service "$1/etc/systemd/system/multi-user.target.wants/headless_nm.service"'
         # Install wifi powersave udev rule
         install -d -m 0755 "$ROOT/etc/udev/rules.d"
         install -m 0644 "${RPI_TEMPLATES}/udev/070-wifi-powersave.rules" \
