@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Usage: chroot "$1" sh -eu -c 'KS_HELPERS="/ks_helpers_path"; USER="pi"; ENV_DIR="/home/pi/klippy-env"; "$KS_HELPERS/mkvenv" "$USER" "$ENV_DIR"'
+set -euo pipefail
+USER="$1"
+ENV_DIR="$2"
+runuser -u "$USER" -- python3 -m venv "$ENV_DIR"
