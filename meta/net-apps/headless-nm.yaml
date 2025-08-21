@@ -6,7 +6,8 @@ mmdebstrap:
   customize-hooks:
     - |-
       /bin/sh -eu -c '
-        ROOT="$0"  # mmdebstrap passes rootfs as $0 to sh -c
+        # mmdebstrap may pass ROOT as $0 (host) or $1 (chroot). Support both.
+        ROOT="${1:-$0}"
 
         # Determine boot path
         if [ -d "$ROOT/boot/firmware" ]; then
@@ -39,7 +40,7 @@ mmdebstrap:
         install -m 0644 "${RPI_TEMPLATES}/udev/070-wifi-powersave.rules" \
           "$ROOT/etc/udev/rules.d/070-wifi-powersave.rules"
 
-        # Enable the service without systemctl (create the wants/ symlink)
+        # Enable the service without systemctl: create the wants/ symlink
         install -d -m 0755 "$ROOT/etc/systemd/system/multi-user.target.wants"
         ln -sfn ../headless_nm.service \
           "$ROOT/etc/systemd/system/multi-user.target.wants/headless_nm.service"
