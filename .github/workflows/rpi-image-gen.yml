@@ -83,6 +83,15 @@ jobs:
           done
           find ci_out -type f -print || true
 
+      - name: Compress and checksum
+        run: |
+          set -eux
+          shopt -s nullglob
+          for img in ci_out/*/artefacts/*.img; do
+            xz -T0 -9 -f "$img"
+            sha256sum "${img}.xz" > "${img}.xz.sha256"
+          done
+
       - name: Verify compressed images exist
         run: |
           set -eux
