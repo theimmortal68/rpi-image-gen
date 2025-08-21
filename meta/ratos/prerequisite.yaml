@@ -3,13 +3,13 @@ name: ratos-prerequisite
 mmdebstrap:
   variant: apt
   packages:
-    - python3-numpy
+  #  - python3-numpy
     - python3-matplotlib
     - python3-opencv
     - python3-serial
     - python3-pip
     - python3-venv
-    - virtualenv
+   # - virtualenv
     - python3-dev
     - libffi-dev
     - build-essential
