@@ -364,6 +364,7 @@ fi
    "${ENV_ROOTFS[@]}" \
    --force \
    --verbose \
+   --debug \
    --name "$IGconf_image_name" \
    --hostname "$IGconf_device_hostname" \
    --output "$IGconf_sys_outputdir" \
