@@ -15,6 +15,7 @@ mmdebstrap:
     - libatlas3-base
     - libatlas-base-dev
     - libgfortran5
+    - libopenblas-dev
     - nodejs
     - npm
     - git
