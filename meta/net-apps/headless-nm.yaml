@@ -20,7 +20,7 @@ customize-hooks:
         "$BOOT_PATH/WiFi-README.txt"
       # Replace OS_NAME placeholder in WiFi README
       sed -i "s|OS_NAME|${DIST_NAME}|g" "$BOOT_PATH/WiFi-README.txt"
-    '
+
 
 
         # # Install systemd service file
