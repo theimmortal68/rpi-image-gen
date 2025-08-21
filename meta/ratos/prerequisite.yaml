@@ -22,9 +22,6 @@ mmdebstrap:
   customize-hooks:
     - |-
       chroot "$1" /bin/sh -eu -c '
-        # Ensure latest numpy from pip
-        python3 -m pip install --no-cache-dir --upgrade numpy
-
         # Install pnpm globally using npm
         npm install -g pnpm
       '
