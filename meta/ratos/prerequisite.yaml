@@ -6,6 +6,8 @@ mmdebstrap:
     - python3-matplotlib
     - python3-opencv
     - python3-serial
+    - python3-pip 
+    - python3-venv
     - virtualenv
     - python3-dev
     - libffi-dev
@@ -14,6 +16,7 @@ mmdebstrap:
     - libatlas-base-dev
     - libgfortran5
     - nodejs
+    - npm
     - git
     - pkg-config
   customize-hooks:
