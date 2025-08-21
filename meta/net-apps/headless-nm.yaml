@@ -3,26 +3,25 @@ name: headless-nm
 mmdebstrap:
   variant: apt
   packages: []
-  customize-hooks:
-    - |-
-      /bin/sh -eu -c '
-        ROOT="$1"
+customize-hooks:
+  - |-
+    /bin/sh -eu -c '
+      ROOT="$0"  # mmdebstrap passes rootfs as $0 to sh -c
+      # Determine boot path
+      if [ -d "$ROOT/boot/firmware" ]; then
+        BOOT_PATH="$ROOT/boot/firmware"
+      else
+        BOOT_PATH="$ROOT/boot"
+      fi
+      # Install templates into boot partition
+      install -m 0644 "${RPI_TEMPLATES}/headless-nm/headless_nm.txt.template" \
+        "$BOOT_PATH/headless_nm.txt.template"
+      install -m 0644 "${RPI_TEMPLATES}/headless-nm/WiFi-README.txt" \
+        "$BOOT_PATH/WiFi-README.txt"
+      # Replace OS_NAME placeholder in WiFi README
+      sed -i "s|OS_NAME|${DIST_NAME}|g" "$BOOT_PATH/WiFi-README.txt"
+    '
 
-        # Determine boot path
-        if [ -d "$ROOT/boot/firmware" ]; then
-          BOOT_PATH="$ROOT/boot/firmware"
-        else
-          BOOT_PATH="$ROOT/boot"
-        fi
-
-        # Install templates into boot partition
-        install -m 0644 "${RPI_TEMPLATES}/headless-nm/headless_nm.txt.template" \
-          "$BOOT_PATH/headless_nm.txt.template"
-        install -m 0644 "${RPI_TEMPLATES}/headless-nm/WiFi-README.txt" \
-          "$BOOT_PATH/WiFi-README.txt"
-
-        # Replace OS_NAME placeholder in WiFi README
-        sed -i "s|OS_NAME|${DIST_NAME}|g" "$BOOT_PATH/WiFi-README.txt"
 
         # # Install systemd service file
         # install -d -m 0755 "$ROOT/etc/systemd/system"
