@@ -93,10 +93,9 @@ jobs:
       - name: Verify compressed images exist
         run: |
           set -eux
-          shopt -s nullglob
+          shopt -s nullglob globstar   # ← add globstar
           files=(ci_out/**/*.img.xz)
           [ ${#files[@]} -gt 0 ] || { echo "No .img.xz files found"; exit 1; }
-          # ensure sha256 sidecars are there too
           for f in "${files[@]}"; do
             [ -f "${f}.sha256" ] || { echo "Missing checksum for $f"; exit 1; }
           done
