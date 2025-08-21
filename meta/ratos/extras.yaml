@@ -1,0 +1,6 @@
+---
+name: ratos-extras
+mmdebstrap:
+  packages:
+    - nginx
+    - ffmpeg
