@@ -16,8 +16,6 @@ mmdebstrap:
     - libatlas-base-dev
     - libgfortran5
     - libopenblas-dev
-    - nodejs
-    - npm
     - git
     - pkg-config
     - uuid
@@ -35,3 +33,5 @@ mmdebstrap:
         # Install pnpm globally using npm
         npm install -g pnpm
       '
+    - runuser -u ${IGconf_device_user1} -- curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+    - apt-get install -y nodejs
