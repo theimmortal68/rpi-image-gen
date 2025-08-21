@@ -1,6 +1,7 @@
 ---
 name: ratos-toolchain
 mmdebstrap:
+  variant: apt
   packages:
     - dfu-util
     - libusb-dev
