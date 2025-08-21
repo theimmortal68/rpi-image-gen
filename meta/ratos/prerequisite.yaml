@@ -20,6 +20,7 @@ mmdebstrap:
     - npm
     - git
     - pkg-config
+    - uuid
   customize-hooks:
     - |-
       chroot "$1" /bin/sh -eu -c '
