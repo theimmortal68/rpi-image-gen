@@ -1,6 +1,7 @@
 ---
 name: networkmanager
 mmdebstrap:
+  variant: apt
   packages:
     - network-manager
   customize-hooks:
