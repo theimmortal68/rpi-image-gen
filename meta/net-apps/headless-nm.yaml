@@ -1,0 +1,34 @@
+---
+name: headless-nm
+mmdebstrap:
+  packages: []
+  customize-hooks:
+    - |-
+      /bin/sh -eu -c '
+        ROOT="$1"
+
+        # Determine boot path
+        if [ -d "$ROOT/boot/firmware" ]; then
+          BOOT_PATH="$ROOT/boot/firmware"
+        else
+          BOOT_PATH="$ROOT/boot"
+        fi
+
+        # Install templates into boot partition
+        install -m 0644 "${RPI_TEMPLATES}/headless-nm/headless_nm.txt.template" "$BOOT_PATH/headless_nm.txt.template"
+        install -m 0644 "${RPI_TEMPLATES}/headless-nm/WiFi-README.txt" "$BOOT_PATH/WiFi-README.txt"
+
+        # Replace OS_NAME placeholder in WiFi README
+        sed -i "s|OS_NAME|${DIST_NAME}|g" "$BOOT_PATH/WiFi-README.txt"
+
+        # Install systemd service
+        install -d -m 0755 "$ROOT/etc/systemd/system"
+        install -m 0644 "${RPI_TEMPLATES}/headless-nm/headless_nm.service" "$ROOT/etc/systemd/system/headless_nm.service"
+
+        # Install headless_nm script
+        install -d -m 0755 "$ROOT/usr/local/bin"
+        install -m 0755 "${RPI_TEMPLATES}/headless-nm/headless_nm" "$ROOT/usr/local/bin/headless_nm"
+
+        # Enable the service
+        "${BDEBSTRAP_HOOKS}/enable-units" "$ROOT" headless_nm
+      '
