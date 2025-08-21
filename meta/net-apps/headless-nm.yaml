@@ -3,43 +3,44 @@ name: headless-nm
 mmdebstrap:
   variant: apt
   packages: []
-customize-hooks:
-  - |-
-    /bin/sh -eu -c '
-      ROOT="$0"  # mmdebstrap passes rootfs as $0 to sh -c
-      # Determine boot path
-      if [ -d "$ROOT/boot/firmware" ]; then
-        BOOT_PATH="$ROOT/boot/firmware"
-      else
-        BOOT_PATH="$ROOT/boot"
-      fi
-      # Install templates into boot partition
-      install -m 0644 "${RPI_TEMPLATES}/headless-nm/headless_nm.txt.template" \
-        "$BOOT_PATH/headless_nm.txt.template"
-      install -m 0644 "${RPI_TEMPLATES}/headless-nm/WiFi-README.txt" \
-        "$BOOT_PATH/WiFi-README.txt"
-      # Replace OS_NAME placeholder in WiFi README
-      sed -i "s|OS_NAME|${DIST_NAME}|g" "$BOOT_PATH/WiFi-README.txt"
+  customize-hooks:
+    - |-
+      /bin/sh -eu -c '
+        ROOT="$0"  # mmdebstrap passes rootfs as $0 to sh -c
 
+        # Determine boot path
+        if [ -d "$ROOT/boot/firmware" ]; then
+          BOOT_PATH="$ROOT/boot/firmware"
+        else
+          BOOT_PATH="$ROOT/boot"
+        fi
 
+        # Install templates into boot partition
+        install -m 0644 "${RPI_TEMPLATES}/headless-nm/headless_nm.txt.template" \
+          "$BOOT_PATH/headless_nm.txt.template"
+        install -m 0644 "${RPI_TEMPLATES}/headless-nm/WiFi-README.txt" \
+          "$BOOT_PATH/WiFi-README.txt"
 
-        # # Install systemd service file
-        # install -d -m 0755 "$ROOT/etc/systemd/system"
-        # install -m 0644 "${RPI_TEMPLATES}/headless-nm/headless_nm.service" \
-        #   "$ROOT/etc/systemd/system/headless_nm.service"
+        # Replace OS_NAME placeholder in WiFi README
+        sed -i "s|OS_NAME|${DIST_NAME}|g" "$BOOT_PATH/WiFi-README.txt"
 
-        # # Install headless_nm script
-        # install -d -m 0755 "$ROOT/usr/local/bin"
-        # install -m 0755 "${RPI_TEMPLATES}/headless-nm/headless_nm" \
-        #   "$ROOT/usr/local/bin/headless_nm"
+        # Install systemd service file
+        install -d -m 0755 "$ROOT/etc/systemd/system"
+        install -m 0644 "${RPI_TEMPLATES}/headless-nm/headless_nm.service" \
+          "$ROOT/etc/systemd/system/headless_nm.service"
 
-        # # Install wifi powersave udev rule
-        # install -d -m 0755 "$ROOT/etc/udev/rules.d"
-        # install -m 0644 "${RPI_TEMPLATES}/udev/070-wifi-powersave.rules" \
-        #   "$ROOT/etc/udev/rules.d/070-wifi-powersave.rules"
+        # Install headless_nm script
+        install -d -m 0755 "$ROOT/usr/local/bin"
+        install -m 0755 "${RPI_TEMPLATES}/headless-nm/headless_nm" \
+          "$ROOT/usr/local/bin/headless_nm"
 
-        # # Enable the service without systemctl (create the wants/ symlink)
-        # install -d -m 0755 "$ROOT/etc/systemd/system/multi-user.target.wants"
-        # ln -sfn ../headless_nm.service \
-        #   "$ROOT/etc/systemd/system/multi-user.target.wants/headless_nm.service"
+        # Install wifi powersave udev rule
+        install -d -m 0755 "$ROOT/etc/udev/rules.d"
+        install -m 0644 "${RPI_TEMPLATES}/udev/070-wifi-powersave.rules" \
+          "$ROOT/etc/udev/rules.d/070-wifi-powersave.rules"
+
+        # Enable the service without systemctl (create the wants/ symlink)
+        install -d -m 0755 "$ROOT/etc/systemd/system/multi-user.target.wants"
+        ln -sfn ../headless_nm.service \
+          "$ROOT/etc/systemd/system/multi-user.target.wants/headless_nm.service"
       '
