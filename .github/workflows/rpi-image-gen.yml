@@ -53,9 +53,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/rpi-image-gen/apt
-          key: ${{ runner.os }}-aptcache-${{ hashFiles('config/**/*.cfg', 'meta/**/*.yaml', 'image/**', 'device/**') }}
-          restore-keys: |
-            ${{ runner.os }}-aptcache-
+          key: ${{ runner.os }}-aptcache-v1
 
       - name: Build image
         env:
