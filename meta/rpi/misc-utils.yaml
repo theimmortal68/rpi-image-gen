@@ -21,8 +21,7 @@ mmdebstrap:
         # dphys-swapfile has no conf.d; divert vendor file and install a managed wrapper
         if dpkg -s dphys-swapfile >/dev/null 2>&1; then
           # Add diversion if not already present; rename moves the current file aside
-          dpkg-divert --quiet --local --add --rename --divert /etc/dphys-swapfile.distrib /etc/dphys-swapfile || true
-
+          dpkg-divert --quiet --local --add --rename --divert /etc/dphys-swapfile.distrib /etc/dphys-swapfile
           # Write our managed config that sets overrides, then sources vendor defaults
           cat > /etc/dphys-swapfile <<'"'"'EOF'"'"'
           # Managed by image build. Local overrides first:
