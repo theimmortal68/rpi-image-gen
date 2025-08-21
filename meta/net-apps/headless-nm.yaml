@@ -32,7 +32,5 @@ mmdebstrap:
         # Install wifi powersave udev rule
         install -d -m 0755 "$ROOT/etc/udev/rules.d"
         install -m 0644 "${RPI_TEMPLATES}/udev/070-wifi-powersave.rules" "$ROOT/etc/udev/rules.d/070-wifi-powersave.rules"
-
-        # Enable the service
-        "${BDEBSTRAP_HOOKS}/enable-units" "$ROOT" headless_nm
       '
+    - "${BDEBSTRAP_HOOKS}/enable-units" "$ROOT" headless_nm
