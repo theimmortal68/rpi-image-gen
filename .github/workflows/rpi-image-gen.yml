@@ -13,9 +13,7 @@ jobs:
     env:
       DEBIAN_FRONTEND: noninteractive
       KS_HELPERS: ${{ github.workspace }}/ks_helpers
-      MMDEBSTRAP_DEBUG: "1"
-      MMDEBSTRAP_APT_GET_EXTRA: "--yes --verbose-versions -o Debug::pkgProblemResolver=1"
-
+      
     steps:
       - name: Checkout
         uses: actions/checkout@v4
