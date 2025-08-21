@@ -2,7 +2,7 @@
 name: ratos-klipper
 mmdebstrap:
   variant: apt
-  packages: []   # git, python3, virtualenv, pip, etc. come from your prerequisite/toolchain layers
+  packages: []   # relies on your prerequisite/toolchain layers for git, python3, python3-venv, pip, etc.
   customize-hooks:
     # --- Clone Kalico (Klipper fork) as the device user
     - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; HOME=/home/$IGconf_device_user1; cd \\"$HOME\\"; runuser -u \\"$USER\\" -- git clone --depth 1 --branch bleeding-edge-v2 https://github.com/KalicoCrew/kalico klipper"'
@@ -10,8 +10,8 @@ mmdebstrap:
     # --- Create printer_data hierarchy (owned by the device user)
     - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; HOME=/home/$IGconf_device_user1; runuser -u \\"$USER\\" -- install -d \\"$HOME/printer_data\\" \\"$HOME/printer_data/config\\" \\"$HOME/printer_data/comms\\" \\"$HOME/printer_data/logs\\" \\"$HOME/printer_data/systemd\\""'
 
-    # --- Python env for Klipper under ${ENV_DIR} (/home/${IGconf_device_user1}/klippy-env)
-    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; HOME=/home/$IGconf_device_user1; ENV_DIR=/home/$IGconf_device_user1/klippy-env; runuser -u \\"$USER\\" -- virtualenv -p python3 \\"$ENV_DIR\\""'
+    # --- Python venv for Klipper using stdlib venv
+    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; ENV_DIR=/home/$IGconf_device_user1/klippy-env; runuser -u \\"$USER\\" -- python3 -m venv \\"$ENV_DIR\\""'
     - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; HOME=/home/$IGconf_device_user1; ENV_DIR=/home/$IGconf_device_user1/klippy-env; runuser -u \\"$USER\\" -- \\"$ENV_DIR/bin/pip\\" install -r \\"$HOME/klipper/scripts/klippy-requirements.txt\\""'
     - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; ENV_DIR=/home/$IGconf_device_user1/klippy-env; runuser -u \\"$USER\\" -- \\"$ENV_DIR/bin/pip\\" install numpy"'
 
