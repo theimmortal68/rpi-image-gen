@@ -21,26 +21,26 @@ mmdebstrap:
         install -m 0644 "${RPI_TEMPLATES}/headless-nm/WiFi-README.txt" \
           "$BOOT_PATH/WiFi-README.txt"
 
-        # Replace OS_NAME placeholder in WiFi README
-        sed -i "s|OS_NAME|${DIST_NAME}|g" "$BOOT_PATH/WiFi-README.txt"
+        # # Replace OS_NAME placeholder in WiFi README
+        # sed -i "s|OS_NAME|${DIST_NAME}|g" "$BOOT_PATH/WiFi-README.txt"
 
-        # Install systemd service file
-        install -d -m 0755 "$ROOT/etc/systemd/system"
-        install -m 0644 "${RPI_TEMPLATES}/headless-nm/headless_nm.service" \
-          "$ROOT/etc/systemd/system/headless_nm.service"
+        # # Install systemd service file
+        # install -d -m 0755 "$ROOT/etc/systemd/system"
+        # install -m 0644 "${RPI_TEMPLATES}/headless-nm/headless_nm.service" \
+        #   "$ROOT/etc/systemd/system/headless_nm.service"
 
-        # Install headless_nm script
-        install -d -m 0755 "$ROOT/usr/local/bin"
-        install -m 0755 "${RPI_TEMPLATES}/headless-nm/headless_nm" \
-          "$ROOT/usr/local/bin/headless_nm"
+        # # Install headless_nm script
+        # install -d -m 0755 "$ROOT/usr/local/bin"
+        # install -m 0755 "${RPI_TEMPLATES}/headless-nm/headless_nm" \
+        #   "$ROOT/usr/local/bin/headless_nm"
 
-        # Install wifi powersave udev rule
-        install -d -m 0755 "$ROOT/etc/udev/rules.d"
-        install -m 0644 "${RPI_TEMPLATES}/udev/070-wifi-powersave.rules" \
-          "$ROOT/etc/udev/rules.d/070-wifi-powersave.rules"
+        # # Install wifi powersave udev rule
+        # install -d -m 0755 "$ROOT/etc/udev/rules.d"
+        # install -m 0644 "${RPI_TEMPLATES}/udev/070-wifi-powersave.rules" \
+        #   "$ROOT/etc/udev/rules.d/070-wifi-powersave.rules"
 
-        # Enable the service without systemctl (create the wants/ symlink)
-        install -d -m 0755 "$ROOT/etc/systemd/system/multi-user.target.wants"
-        ln -sfn ../headless_nm.service \
-          "$ROOT/etc/systemd/system/multi-user.target.wants/headless_nm.service"
+        # # Enable the service without systemctl (create the wants/ symlink)
+        # install -d -m 0755 "$ROOT/etc/systemd/system/multi-user.target.wants"
+        # ln -sfn ../headless_nm.service \
+        #   "$ROOT/etc/systemd/system/multi-user.target.wants/headless_nm.service"
       '
