@@ -102,15 +102,15 @@ jobs:
       - name: Create/update release with assets
         uses: ncipollo/release-action@v1
         with:
-        tag: nightly-17117144206
-        name: Nightly 17117144206
-        allowUpdates: true
-        draft: false
-        prerelease: true
-        artifacts: |
-          ci_out/**/deploy/*.img.zst,
-          ci_out/**/deploy/*.img.zst.sha256,
-          ci_out/**/deploy/*.sbom.zst
-        artifactErrorsFailBuild: true
-        generateReleaseNotes: false
-        makeLatest: legacy
+          tag: nightly-17117144206
+          name: Nightly 17117144206
+          allowUpdates: true
+          draft: false
+          prerelease: true
+          artifacts: |
+            ci_out/**/deploy/*.img.zst,
+            ci_out/**/deploy/*.img.zst.sha256,
+            ci_out/**/deploy/*.sbom.zst
+          artifactErrorsFailBuild: true
+          generateReleaseNotes: false
+          makeLatest: legacy
