@@ -4,7 +4,7 @@ mmdebstrap:
   variant: apt
   packages: []   # git, python3, python3-venv, pip, etc. come from prerequisite/toolchain layers
   customize-hooks:
-    # --- Clone Kalico (Klipper fork) as the device user
+    # --- Clone Kalico (Klipper fork) as the device user (shallow)
     - >
       chroot "$1" sh -eu -c '
         USER="$IGconf_device_user1"
@@ -50,6 +50,18 @@ mmdebstrap:
     - 'install -d -m 0755 "$1/home/$IGconf_device_user1/printer_data/systemd"'
     - 'install -m 0644 "$RPI_TEMPLATES/klipper/klipper.env" "$1/home/$IGconf_device_user1/printer_data/systemd/klipper.env"'
     - 'chroot "$1" sh -eu -c "chown $IGconf_device_user1:$IGconf_device_user1 /home/$IGconf_device_user1/printer_data/systemd/klipper.env"'
+
+    # --- Pre-compile Klipper (Python .pyc and C chelper), as device user
+    - >
+      chroot "$1" sh -eu -c '
+        USER="$IGconf_device_user1"
+        runuser -u "$USER" -- sh -c "/home/$IGconf_device_user1/klippy-env/bin/python -m compileall /home/$IGconf_device_user1/klipper/klippy"
+      '
+    - >
+      chroot "$1" sh -eu -c '
+        USER="$IGconf_device_user1"
+        runuser -u "$USER" -- sh -c "/home/$IGconf_device_user1/klippy-env/bin/python /home/$IGconf_device_user1/klipper/klippy/chelper/__init__.py"
+      '
 
     # --- Enable the service using the bdebstrap helper
     - '"$BDEBSTRAP_HOOKS/enable-units" "$1" klipper'
