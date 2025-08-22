@@ -24,6 +24,7 @@ mmdebstrap:
     - unzip
     - rsyslog
     - logrotate
+    - can-utils
   customize-hooks:
     - |-
       chroot "$1" /bin/sh -eu -c '
