@@ -3,41 +3,34 @@ name: canbus-networkmanager
 mmdebstrap:
   variant: apt
   packages:
-    - can-utils          # optional, handy tools: candump/cansend/canplayer/etc.
+    - can-utils
   customize-hooks:
-    # --- Ensure NM system-connections dir exists
+    # NM keyfiles need 0700 dir perms
     - 'install -d -m 0700 "$1/etc/NetworkManager/system-connections"'
 
-    # --- Write can0 NetworkManager keyfile (autoconnect, 1 Mbps)
+    # Write can0 keyfile (autoconnect, 1 Mbps)
     - >
-      /bin/sh -eu -c '
-        F="$1/etc/NetworkManager/system-connections/can0.nmconnection";
-        printf "%s\n" \
-          "[connection]" \
-          "id=can0" \
-          "uuid=6f1d9d9c-9c0d-4b5b-9c79-2a4a7d1a1a00" \
-          "type=can" \
-          "autoconnect=true" \
-          "" \
-          "[can]" \
-          "bitrate=1000000" \
-          "fd=false" \
-          "listen-only=false" \
-          "restart-ms=100" \
-          "" \
-          "[ipv4]" \
-          "method=disabled" \
-          "" \
-          "[ipv6]" \
-          "method=ignore" \
-          > "$F";
-        chmod 0600 "$F"
-      '
+      F="$1/etc/NetworkManager/system-connections/can0.nmconnection";
+      printf "%s\n" \
+        "[connection]" \
+        "id=can0" \
+        "uuid=6f1d9d9c-9c0d-4b5b-9c79-2a4a7d1a1a00" \
+        "type=can" \
+        "autoconnect=true" \
+        "" \
+        "[can]" \
+        "bitrate=1000000" \
+        "fd=false" \
+        "listen-only=false" \
+        "restart-ms=100" \
+        "" \
+        "[ipv4]" \
+        "method=disabled" \
+        "" \
+        "[ipv6]" \
+        "method=ignore" \
+        > "$F";
+      chmod 0600 "$F"
 
-    # --- (Optional) Preload core CAN socket modules at boot (non-hardware-specific)
-    - >
-      /bin/sh -eu -c '
-        M="$1/etc/modules-load.d/can.conf";
-        printf "%s\n%s\n" "can" "can_raw" > "$M";
-        chmod 0644 "$M"
-      '
+    # (Optional) preload CAN socket modules
+    - 'printf "%s\n%s\n" can can_raw > "$1/etc/modules-load.d/can.conf"'
