@@ -25,3 +25,6 @@ mmdebstrap:
     # --- Copy moonraker.conf and ensure user ownership
     - 'install -m 0644 "$RPI_TEMPLATES/moonraker.conf" "$1/home/$IGconf_device_user1/printer_data/config/moonraker.conf"'
     - 'chroot "$1" sh -eu -c "chown $IGconf_device_user1:$IGconf_device_user1 /home/$IGconf_device_user1/printer_data/config/moonraker.conf"'
+
+    # --- Enable the moonraker service without calling systemctl in-chroot
+    - '"$BDEBSTRAP_HOOKS/enable-units" "$1" moonraker'
