@@ -4,16 +4,17 @@ mmdebstrap:
   variant: apt
   packages: []
   customize-hooks:
+    # --- In-chroot: user-scoped work (pass username as $1 to inner shell)
     - |-
       chroot "$1" /bin/sh -eu -c '
-        U="$IGconf_device_user1"
-        H="/home/$IGconf_device_user1"
+        U="$1"
+        H="/home/$1"
         ENV_DIR="$H/klippy-env"
 
-        # Clone Kalico (bleeding-edge-v2) as user
+        # Clone Kalico (bleeding-edge-v2) as the device user
         runuser -u "$U" -- git clone --depth 1 --branch bleeding-edge-v2 https://github.com/KalicoCrew/kalico "$H/klipper"
 
-        # Create printer_data tree as user
+        # Create printer_data tree as the user
         runuser -u "$U" -- sh -eu -c "install -d \"$H/printer_data\" \"$H/printer_data/config\" \"$H/printer_data/comms\" \"$H/printer_data/logs\" \"$H/printer_data/systemd\""
 
         # Ensure python present & create venv
@@ -23,15 +24,17 @@ mmdebstrap:
         runuser -u "$U" -- "$ENV_DIR/bin/pip" install -r "$H/klipper/scripts/klippy-requirements.txt"
         runuser -u "$U" -- "$ENV_DIR/bin/pip" install numpy
 
-        # Drop service + env via templates
-        install -d -m 0755 /etc/systemd/system
-        install -m 0644 "$RPI_TEMPLATES/klipper/klipper.service" /etc/systemd/system/klipper.service
-
-        # Put klipper.env in user's tree as user (avoid chown)
-        runuser -u "$U" -- sh -eu -c "install -D -m 0644 \"$RPI_TEMPLATES/klipper/klipper.env\" \"$H/printer_data/systemd/klipper.env\""
-
         # Pre-compile klippy to warm caches
         runuser -u "$U" -- "$ENV_DIR/bin/python" -m compileall "$H/klipper/klippy"
         runuser -u "$U" -- "$ENV_DIR/bin/python" "$H/klipper/klippy/chelper/__init__.py"
-      '
-    - '"$BDEBSTRAP_HOOKS/enable-units" "$1" klipper'
+      ' -- "$IGconf_device_user1"
+
+    # --- Host-side: copy unit/env from templates, then enable units (single step)
+    - |-
+      install -d -m 0755 "$1/etc/systemd/system"
+      install -m 0644 "$RPI_TEMPLATES/klipper/klipper.service" "$1/etc/systemd/system/klipper.service"
+
+      install -d -m 0755 "$1/home/$IGconf_device_user1/printer_data/systemd"
+      install -m 0644 "$RPI_TEMPLATES/klipper/klipper.env" "$1/home/$IGconf_device_user1/printer_data/systemd/klipper.env"
+
+      "$BDEBSTRAP_HOOKS/enable-units" "$1" klipper
