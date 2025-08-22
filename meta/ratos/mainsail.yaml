@@ -1,33 +1,29 @@
-# ratos-mainsail.yaml
+# ratos-mainsail.yaml (templates host-side; user tasks in chroot)
 name: ratos-mainsail
 mmdebstrap:
   variant: apt
-  packages: []   # all deps already in ratos-prerequisite
+  packages: []
   customize-hooks:
+    # Host-side: install nginx templates, tweak logrotate, wire symlink
+    - |-
+      rm -f "$1/etc/nginx/sites-enabled/default"
+      install -D -m 0644 "$RPI_TEMPLATES/mainsail/mainsail"        "$1/etc/nginx/sites-available/mainsail"
+      install -D -m 0644 "$RPI_TEMPLATES/mainsail/common_vars.conf" "$1/etc/nginx/conf.d/common_vars.conf"
+      install -D -m 0644 "$RPI_TEMPLATES/mainsail/upstreams.conf"   "$1/etc/nginx/conf.d/upstreams.conf"
+      install -D -m 0644 "$RPI_TEMPLATES/mainsail/rsyslog"          "$1/etc/logrotate.d/rsyslog"
+      mkdir -p "$1/etc/nginx/sites-enabled"
+      ln -sfn /etc/nginx/sites-available/mainsail "$1/etc/nginx/sites-enabled/mainsail"
+      sed -i 's/rotate 14/rotate 2/' "$1/etc/logrotate.d/nginx" || true
+
+    # In-chroot: fetch mainsail assets and link config as the device user
     - |-
       chroot "$1" /bin/sh -eu -c '
-        U="$IGconf_device_user1"
-        H="/home/$IGconf_device_user1"
+        U="$1"
+        H="/home/$1"
 
-        # Nginx site + common configs from templates
-        rm -f /etc/nginx/sites-enabled/default
-        install -D -m 0644 "$RPI_TEMPLATES/mainsail/mainsail"        /etc/nginx/sites-available/mainsail
-        install -D -m 0644 "$RPI_TEMPLATES/mainsail/common_vars.conf" /etc/nginx/conf.d/common_vars.conf
-        install -D -m 0644 "$RPI_TEMPLATES/mainsail/upstreams.conf"   /etc/nginx/conf.d/upstreams.conf
-        install -D -m 0644 "$RPI_TEMPLATES/mainsail/rsyslog"          /etc/logrotate.d/rsyslog
-
-        mkdir -p /etc/nginx/sites-enabled
-        ln -sfn /etc/nginx/sites-available/mainsail /etc/nginx/sites-enabled/mainsail
-
-        # Reduce nginx logrotate retention
-        sed -i "s/rotate 14/rotate 2/" /etc/logrotate.d/nginx || true
-
-        # Ensure user logs dir and link nginx logs there (symlinks)
         runuser -u "$U" -- install -d "$H/printer_data/logs"
-        ln -sfn /var/log/nginx/mainsail-access.log "$H/printer_data/logs/mainsail-access.log"
-        ln -sfn /var/log/nginx/mainsail-error.log  "$H/printer_data/logs/mainsail-error.log"
 
-        # Fetch latest Mainsail zip and unpack as user
+        # Download & unpack Mainsail into $H/mainsail
         runuser -u "$U" -- sh -eu -c "
           rm -rf \"$H/mainsail\"
           wget -q -O \"$H/mainsail.zip\" https://github.com/mainsail-crew/mainsail/releases/latest/download/mainsail.zip
@@ -35,10 +31,10 @@ mmdebstrap:
           rm -f \"$H/mainsail.zip\"
         "
 
-        # Mainsail config: clone and link as user
+        # Clone mainsail-config and link into printer_data/config
         runuser -u "$U" -- sh -eu -c "
           git clone --depth 1 https://github.com/mainsail-crew/mainsail-config.git \"$H/mainsail-config\"
           install -d \"$H/printer_data/config\"
           ln -sfn \"$H/mainsail-config/mainsail.cfg\" \"$H/printer_data/config/mainsail.cfg\"
         "
-      '
+      ' -- "$IGconf_device_user1"
