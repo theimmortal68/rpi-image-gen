@@ -1,36 +1,35 @@
----
-name: canbus-networkmanager
+# ratos-canbus-nm.yaml
+name: ratos-canbus-nm
 mmdebstrap:
   variant: apt
-  packages:
-    - can-utils
+  packages: []
   customize-hooks:
-    # NM keyfiles need 0700 dir perms
-    - 'install -d -m 0700 "$1/etc/NetworkManager/system-connections"'
+    - |-
+      /bin/sh -eu -c '
+        F="$1/etc/NetworkManager/system-connections/can0.nmconnection"
+        install -d -m 0700 "$(dirname "$F")"
+        printf "%s\n" \
+          "[connection]" \
+          "id=can0" \
+          "uuid=6f1d9d9c-9c0d-4b5b-9c79-2a4a7d1a1a00" \
+          "type=can" \
+          "autoconnect=true" \
+          "" \
+          "[can]" \
+          "bitrate=1000000" \
+          "fd=false" \
+          "listen-only=false" \
+          "restart-ms=100" \
+          "" \
+          "[ipv4]" \
+          "method=disabled" \
+          "" \
+          "[ipv6]" \
+          "method=ignore" \
+          > "$F"
+        chmod 0600 "$F"
 
-    # Write can0 keyfile (autoconnect, 1 Mbps)
-    - >
-      F="$1/etc/NetworkManager/system-connections/can0.nmconnection";
-      printf "%s\n" \
-        "[connection]" \
-        "id=can0" \
-        "uuid=6f1d9d9c-9c0d-4b5b-9c79-2a4a7d1a1a00" \
-        "type=can" \
-        "autoconnect=true" \
-        "" \
-        "[can]" \
-        "bitrate=1000000" \
-        "fd=false" \
-        "listen-only=false" \
-        "restart-ms=100" \
-        "" \
-        "[ipv4]" \
-        "method=disabled" \
-        "" \
-        "[ipv6]" \
-        "method=ignore" \
-        > "$F";
-      chmod 0600 "$F"
-
-    # (Optional) preload CAN socket modules
-    - 'printf "%s\n%s\n" can can_raw > "$1/etc/modules-load.d/can.conf"'
+        echo "can"      >  "$1/etc/modules-load.d/can.conf"
+        echo "can_raw"  >> "$1/etc/modules-load.d/can.conf"
+        echo "vcan"     >> "$1/etc/modules-load.d/can.conf"
+      '
