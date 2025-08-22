@@ -51,6 +51,5 @@ mmdebstrap:
     - 'install -m 0644 "$RPI_TEMPLATES/klipper/klipper.env" "$1/home/$IGconf_device_user1/printer_data/systemd/klipper.env"'
     - 'chroot "$1" sh -eu -c "chown $IGconf_device_user1:$IGconf_device_user1 /home/$IGconf_device_user1/printer_data/systemd/klipper.env"'
 
-    # --- Enable the service without systemctl (create wants/ symlink)
-    - 'install -d -m 0755 "$1/etc/systemd/system/multi-user.target.wants"'
-    - 'ln -sfn ../klipper.service "$1/etc/systemd/system/multi-user.target.wants/klipper.service"'
+    # --- Enable the service using the bdebstrap helper
+    - '"$BDEBSTRAP_HOOKS/enable-units" "$1" klipper'
