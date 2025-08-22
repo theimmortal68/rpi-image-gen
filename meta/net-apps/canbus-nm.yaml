@@ -1,35 +1,36 @@
-# ratos-canbus-nm.yaml
 name: ratos-canbus-nm
 mmdebstrap:
   variant: apt
   packages: []
   customize-hooks:
     - |-
-      /bin/sh -eu -c '
-        F="$1/etc/NetworkManager/system-connections/can0.nmconnection"
-        install -d -m 0700 "$(dirname "$F")"
-        printf "%s\n" \
-          "[connection]" \
-          "id=can0" \
-          "uuid=6f1d9d9c-9c0d-4b5b-9c79-2a4a7d1a1a00" \
-          "type=can" \
-          "autoconnect=true" \
-          "" \
-          "[can]" \
-          "bitrate=1000000" \
-          "fd=false" \
-          "listen-only=false" \
-          "restart-ms=100" \
-          "" \
-          "[ipv4]" \
-          "method=disabled" \
-          "" \
-          "[ipv6]" \
-          "method=ignore" \
-          > "$F"
-        chmod 0600 "$F"
+      # write NM connection file directly using the hook's $1 (rootfs)
+      F="$1/etc/NetworkManager/system-connections/can0.nmconnection"
+      install -d -m 0700 "$(dirname "$F")"
+      cat > "$F" <<'EOF'
+      [connection]
+      id=can0
+      uuid=6f1d9d9c-9c0d-4b5b-9c79-2a4a7d1a1a00
+      type=can
+      autoconnect=true
 
-        echo "can"      >  "$1/etc/modules-load.d/can.conf"
-        echo "can_raw"  >> "$1/etc/modules-load.d/can.conf"
-        echo "vcan"     >> "$1/etc/modules-load.d/can.conf"
-      '
+      [can]
+      bitrate=1000000
+      fd=false
+      listen-only=false
+      restart-ms=100
+
+      [ipv4]
+      method=disabled
+
+      [ipv6]
+      method=ignore
+      EOF
+      chmod 0600 "$F"
+
+      # ensure CAN modules load at boot
+      {
+        echo can
+        echo can_raw
+        echo vcan
+      } > "$1/etc/modules-load.d/can.conf"
