@@ -5,27 +5,52 @@ mmdebstrap:
   packages: []   # git, python3, python3-venv, pip, etc. come from prerequisite/toolchain layers
   customize-hooks:
     # --- Clone Kalico (Klipper fork) as the device user
-    - "chroot \"$1\" sh -eu -c \"USER=\\\"$IGconf_device_user1\\\"; cd /home/$IGconf_device_user1; runuser -u \\\"$USER\\\" -- sh -c '\\''git clone --depth 1 --branch bleeding-edge-v2 https://github.com/KalicoCrew/kalico klipper'\\'''"
+    - >
+      chroot "$1" sh -eu -c '
+        USER="$IGconf_device_user1"
+        cd /home/$IGconf_device_user1
+        runuser -u "$USER" -- sh -c "git clone --depth 1 --branch bleeding-edge-v2 https://github.com/KalicoCrew/kalico klipper"
+      '
 
     # --- Create printer_data hierarchy (owned by the device user)
-    - "chroot \"$1\" sh -eu -c \"USER=\\\"$IGconf_device_user1\\\"; runuser -u \\\"$USER\\\" -- sh -c '\\''install -d /home/$IGconf_device_user1/printer_data /home/$IGconf_device_user1/printer_data/config /home/$IGconf_device_user1/printer_data/comms /home/$IGconf_device_user1/printer_data/logs /home/$IGconf_device_user1/printer_data/systemd'\\'''"
+    - >
+      chroot "$1" sh -eu -c '
+        USER="$IGconf_device_user1"
+        runuser -u "$USER" -- sh -c "install -d /home/$IGconf_device_user1/printer_data /home/$IGconf_device_user1/printer_data/config /home/$IGconf_device_user1/printer_data/comms /home/$IGconf_device_user1/printer_data/logs /home/$IGconf_device_user1/printer_data/systemd"
+      '
 
     # --- Sanity check: python3 must exist in the chroot
-    - "chroot \"$1\" sh -eu -c \"test -x /usr/bin/python3 && /usr/bin/python3 --version >/dev/null\""
+    - 'chroot "$1" sh -eu -c "test -x /usr/bin/python3 && /usr/bin/python3 --version >/dev/null"'
 
     # --- Python venv for Klipper using stdlib venv
-    - "chroot \"$1\" sh -eu -c \"USER=\\\"$IGconf_device_user1\\\"; runuser -u \\\"$USER\\\" -- sh -c '\\''/usr/bin/python3 -m venv /home/$IGconf_device_user1/klippy-env'\\'''"
-    - "chroot \"$1\" sh -eu -c \"USER=\\\"$IGconf_device_user1\\\"; runuser -u \\\"$USER\\\" -- sh -c '\\''/home/$IGconf_device_user1/klippy-env/bin/pip install --upgrade pip setuptools wheel'\\'''"
-    - "chroot \"$1\" sh -eu -c \"USER=\\\"$IGconf_device_user1\\\"; runuser -u \\\"$USER\\\" -- sh -c '\\''/home/$IGconf_device_user1/klippy-env/bin/pip install -r /home/$IGconf_device_user1/klipper/scripts/klippy-requirements.txt'\\'''"
-    - "chroot \"$1\" sh -eu -c \"USER=\\\"$IGconf_device_user1\\\"; runuser -u \\\"$USER\\\" -- sh -c '\\''/home/$IGconf_device_user1/klippy-env/bin/pip install numpy'\\'''"
+    - >
+      chroot "$1" sh -eu -c '
+        USER="$IGconf_device_user1"
+        runuser -u "$USER" -- sh -c "/usr/bin/python3 -m venv /home/$IGconf_device_user1/klippy-env"
+      '
+    - >
+      chroot "$1" sh -eu -c '
+        USER="$IGconf_device_user1"
+        runuser -u "$USER" -- sh -c "/home/$IGconf_device_user1/klippy-env/bin/pip install --upgrade pip setuptools wheel"
+      '
+    - >
+      chroot "$1" sh -eu -c '
+        USER="$IGconf_device_user1"
+        runuser -u "$USER" -- sh -c "/home/$IGconf_device_user1/klippy-env/bin/pip install -r /home/$IGconf_device_user1/klipper/scripts/klippy-requirements.txt"
+      '
+    - >
+      chroot "$1" sh -eu -c '
+        USER="$IGconf_device_user1"
+        runuser -u "$USER" -- sh -c "/home/$IGconf_device_user1/klippy-env/bin/pip install numpy"
+      '
 
     # --- Install systemd unit + env file (host-side copy), then fix ownership of the env
-    - "install -d -m 0755 \"$1/etc/systemd/system\""
-    - "install -m 0644 \"$RPI_TEMPLATES/klipper.service\" \"$1/etc/systemd/system/klipper.service\""
-    - "install -d -m 0755 \"$1/home/$IGconf_device_user1/printer_data/systemd\""
-    - "install -m 0644 \"$RPI_TEMPLATES/klipper.env\" \"$1/home/$IGconf_device_user1/printer_data/systemd/klipper.env\""
-    - "chroot \"$1\" sh -eu -c \"chown $IGconf_device_user1:$IGconf_device_user1 /home/$IGconf_device_user1/printer_data/systemd/klipper.env\""
+    - 'install -d -m 0755 "$1/etc/systemd/system"'
+    - 'install -m 0644 "$RPI_TEMPLATES/klipper.service" "$1/etc/systemd/system/klipper.service"'
+    - 'install -d -m 0755 "$1/home/$IGconf_device_user1/printer_data/systemd"'
+    - 'install -m 0644 "$RPI_TEMPLATES/klipper.env" "$1/home/$IGconf_device_user1/printer_data/systemd/klipper.env"'
+    - 'chroot "$1" sh -eu -c "chown $IGconf_device_user1:$IGconf_device_user1 /home/$IGconf_device_user1/printer_data/systemd/klipper.env"'
 
     # --- Enable the service without systemctl (create wants/ symlink)
-    - "install -d -m 0755 \"$1/etc/systemd/system/multi-user.target.wants\""
-    - "ln -sfn ../klipper.service \"$1/etc/systemd/system/multi-user.target.wants/klipper.service\""
+    - 'install -d -m 0755 "$1/etc/systemd/system/multi-user.target.wants"'
+    - 'ln -sfn ../klipper.service "$1/etc/systemd/system/multi-user.target.wants/klipper.service"'
