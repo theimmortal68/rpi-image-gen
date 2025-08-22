@@ -1,0 +1,13 @@
+---
+name: ratos-kiauh
+mmdebstrap:
+  variant: apt
+  packages: []   # relies on prerequisites for git, etc.
+  customize-hooks:
+    # --- Clone KIAUH into the device user's home (shallow)
+    - >
+      chroot "$1" sh -eu -c '
+        USER="$IGconf_device_user1"
+        cd /home/$IGconf_device_user1
+        runuser -u "$USER" -- sh -c "git clone --depth 1 https://github.com/dw-0/kiauh.git"
+      '
