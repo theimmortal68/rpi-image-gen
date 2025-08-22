@@ -15,7 +15,7 @@ KS_PROFILE_DIR="${KS_TOP}/profile"
 KS_META_DIR="${KS_TOP}/meta"
 KS_META_HOOKS_DIR="${KS_TOP}/meta-hooks"
 KS_TEMPLATES="${KS_TOP}/templates"
-KS_HELPERS="${KS_TOP}/hooks"
+KS_HELPERS="${KS_HELPERS:-${KS_TOP}/hooks}"   # allow env override
 
 # ---------------- Core helpers ------------------
 source "${KS_TOP}/scripts/dependencies_check"
@@ -23,6 +23,57 @@ dependencies_check "${KS_TOP}/depends" || exit 1
 source "${KS_TOP}/scripts/common"
 source "${KS_TOP}/scripts/core"
 source "${KS_TOP}/bin/ksconf"   # KS config/option loader
+
+# ---- build log snapshot (KS paths + KSconf_* vars; secrets redacted) ----
+log_snapshot() {
+  local when rev logdir lf
+  when="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+  rev="$(git -C "$KS_TOP" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  logdir="${KSconf_sys_workdir:-$KS_TOP/work}/logs"
+  mkdir -p "$logdir"
+  lf="$logdir/build.env.$(date +%Y%m%d-%H%M%S).log"
+
+  is_secret_name() {
+    shopt -s nocasematch
+    case "$1" in
+      *password*|*pass*|*secret*|*token*|*apikey*|*privkey*|*private_key*|*cookie*|*auth*)
+        shopt -u nocasematch; return 0 ;;
+      *) shopt -u nocasematch; return 1 ;;
+    esac
+  }
+
+  {
+    echo "=== Build environment snapshot ==="
+    echo "time: $when"
+    echo "repo: $KS_TOP (rev $rev)"
+    echo
+
+    echo "[KS paths]"
+    for n in KS_TOP KS_CONFIG_DIR KS_DEVICE_DIR KS_IMAGE_DIR KS_PROFILE_DIR KS_META_DIR KS_META_HOOKS_DIR KS_TEMPLATES KS_HELPERS; do
+      printf "%-32s = %s\n" "$n" "${!n-}"
+    done
+    echo
+
+    echo "[KSconf_* variables]"
+    mapfile -t _vars < <(compgen -A variable | grep '^KSconf_' | sort -f)
+    for n in "${_vars[@]}"; do
+      v="${!n-}"
+      v="${v//$'\n'/\\n}"
+      if is_secret_name "$n"; then
+        printf "%-32s = %s\n" "$n" "***REDACTED***"
+      else
+        printf "%-32s = %s\n" "$n" "$v"
+      fi
+    done
+
+    if [[ "${KS_LOG_FULL_ENV:-n}" =~ ^(y|yes|1)$ ]]; then
+      echo; echo "[Full process env]  (WARNING: may contain secrets)"
+      env | sort
+    fi
+  } | tee -a "$lf"
+
+  msg "Wrote variable snapshot to $lf (secrets redacted)"
+}
 
 # ---------------- CLI ---------------------------
 EXT_DIR=
@@ -114,6 +165,50 @@ msg "Reading $CFG with options [${INOPTIONS:-}]"
 [[ -s "${INOPTIONS:-}" ]] && apply_options "$INOPTIONS"
 aggregate_config "$CFG"
 
+# --- Compatibility for older keys/env (remove after migration) ---
+# device.user1 -> device.user
+if ksconf_isset device_user1 && ksconf_isnset device_user; then
+  KSconf_device_user="$KSconf_device_user1"
+fi
+# device.userpass / device.user1pass -> device.password
+if ksconf_isset device_userpass && ksconf_isnset device_password; then
+  KSconf_device_password="$KSconf_device_userpass"
+fi
+if ksconf_isset device_user1pass && ksconf_isnset device_password; then
+  KSconf_device_password="$KSconf_device_user1pass"
+fi
+# device.ssh_user1 / device.ssh_user -> device.ssh
+if ksconf_isset device_ssh_user1 && ksconf_isnset device_ssh; then
+  KSconf_device_ssh="$KSconf_device_ssh_user1"
+fi
+if ksconf_isset device_ssh_user && ksconf_isnset device_ssh; then
+  KSconf_device_ssh="$KSconf_device_ssh_user"
+fi
+# meta.ssh_pubkey_user1 -> meta.ssh_pubkey
+if ksconf_isset meta_ssh_pubkey_user1 && ksconf_isnset meta_ssh_pubkey; then
+  KSconf_meta_ssh_pubkey="$KSconf_meta_ssh_pubkey_user1"
+fi
+# Legacy DIST_NAME -> sys_dist_name
+if [[ -n "${DIST_NAME:-}" ]] && ksconf_isnset sys_dist_name; then
+  KSconf_sys_dist_name="$DIST_NAME"
+fi
+# Legacy env → sys.* keys (if not set via options/defaults)
+if [[ -n "${DEBIAN_FRONTEND:-}" ]] && ksconf_isnset sys_debian_frontend; then
+  KSconf_sys_debian_frontend="$DEBIAN_FRONTEND"
+fi
+if [[ -n "${APT_LISTCHANGES_FRONTEND:-}" ]] && ksconf_isnset sys_apt_listchanges_frontend; then
+  KSconf_sys_apt_listchanges_frontend="$APT_LISTCHANGES_FRONTEND"
+fi
+if [[ -n "${NEEDRESTART_MODE:-}" ]] && ksconf_isnset sys_needrestart_mode; then
+  KSconf_sys_needrestart_mode="$NEEDRESTART_MODE"
+fi
+if [[ -n "${DEBCONF_NONINTERACTIVE_SEEN:-}" ]] && ksconf_isnset sys_debconf_noninteractive_seen; then
+  KSconf_sys_debconf_noninteractive_seen="$DEBCONF_NONINTERACTIVE_SEEN"
+fi
+
+# Emit an env snapshot to logs (secrets redacted)
+log_snapshot
+
 # Required config keys
 [[ -z ${KSconf_image_layout+x}  ]] && die "No image layout provided"
 [[ -z ${KSconf_device_class+x}  ]] && die "No device class provided"
@@ -199,6 +294,23 @@ for v in $(compgen -A variable -X '!KSconf*') ; do
     KSconf_sys_apt_get_purge)
       if ksconf_isy $v ; then ENV_ROOTFS+=('--aptopt' "APT::Get::Purge true") ; fi
       ;;
+    # Map sys.* convenience keys to standard envs inside the build/chroot
+    KSconf_sys_debian_frontend)
+      ENV_ROOTFS+=('--env' DEBIAN_FRONTEND="${!v}")
+      ENV_POST_BUILD+=(DEBIAN_FRONTEND="${!v}")
+      ;;
+    KSconf_sys_apt_listchanges_frontend)
+      ENV_ROOTFS+=('--env' APT_LISTCHANGES_FRONTEND="${!v}")
+      ENV_POST_BUILD+=(APT_LISTCHANGES_FRONTEND="${!v}")
+      ;;
+    KSconf_sys_needrestart_mode)
+      ENV_ROOTFS+=('--env' NEEDRESTART_MODE="${!v}")
+      ENV_POST_BUILD+=(NEEDRESTART_MODE="${!v}")
+      ;;
+    KSconf_sys_debconf_noninteractive_seen)
+      ENV_ROOTFS+=('--env' DEBCONF_NONINTERACTIVE_SEEN="${!v}")
+      ENV_POST_BUILD+=(DEBCONF_NONINTERACTIVE_SEEN="${!v}")
+      ;;
     KSconf_ext_dir|KSconf_ext_nsdir)
       ENV_ROOTFS+=('--env' ${v}="${!v}")
       ENV_POST_BUILD+=(${v}="${!v}")
@@ -272,7 +384,7 @@ load_profile() {  # scope, file
 
 load_profile main   "$KS_PROFILE"
 if ksconf_isset image_profile ; then load_profile image "${KS_IMAGE}/profile/${KSconf_image_profile}"; fi
-if ksconf_isy device_ssh_user1 ; then layer_push auto net-apps/openssh-server; fi
+if ksconf_isy device_ssh ; then layer_push auto net-apps/openssh-server; fi
 layer_push auto sys-apps/finalize-upgrade
 
 # ---------------- Hook runner -------------------

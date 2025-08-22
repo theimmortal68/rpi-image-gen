@@ -44,3 +44,12 @@ deploydir="${KSconf_sys_workdir}/deploy"
 # Note that it's possible to specify a directory here and use a post-build hook
 # to create a file (eg tarball) as an additional artefact.
 target="${KSconf_sys_workdir}/rootfs"
+
+# System-wide defaults
+dist_name=ratos
+
+# Debconf/Apt frontend inside the image
+debian_frontend=noninteractive
+apt_listchanges_frontend=none
+needrestart_mode=a        # avoid interactive needrestart prompts
+debconf_noninteractive_seen=true

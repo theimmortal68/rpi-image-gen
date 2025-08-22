@@ -10,35 +10,33 @@ variant=none
 hostname=ratos
 
 # A user account with this name will be created on the device
-user1=pi
+user=pi
 
 # Password required to log into the above account. If empty, the account will be locked.
-user1pass=raspberry
+# Prefer setting via env/secret: KSconf_device_password
+password=raspberry
 
 # Default locale
-locale1="en_US.UTF-8"
+locale="en_US.UTF-8"
 
-# Default keymap
+# Default keymap and layout
 keyboard_keymap=us
-
-# Default keyboard layout
 # debconf-show keyboard-configuration keyboard-configuration/xkb-keymap
 keyboard_layout="English (US)"
 
-# Default timezone
-# /etc/timezone
+# Default timezone (/etc/timezone)
 timezone="America/New_York"
 
 # The profile used to construct the device root filesystem
 profile=
 
-# If y, automatically include net-apps/openssh-server in the profile to enable
-# SSH access to the device via user1.
-ssh_user1=y
+# If y, automatically include net-apps/openssh-server in the profile to enable SSH.
+# (build.sh checks KSconf_device_ssh)
+ssh=y
 
 # The storage type used by the device. Supported values are sd, emmc or nvme.
 storage_type=sd
 
-# Logical sector size of the device storage for which the image is intended. 
+# Logical sector size of the device storage for which the image is intended.
 # The output raw image file size will be a multiple of this value.
 sector_size=512

@@ -1,25 +1,30 @@
 #!/bin/bash
+# Normalize device user access and SSH perms inside the target rootfs
+# - No external tool deps (no grep-dctrl)
+# - Safe quoting; strict error handling
 
-set -u
+set -euo pipefail
 
-# User role and management operations
+# Require the primary device user to be defined
+U="${KSconf_device_user:?KSconf_device_user unset}"
 
-if grep-dctrl -q -XFStatus "install ok installed" -a \
-   -XFPackage docker-ce $1/var/lib/dpkg/status ; then
-   if igconf isy meta_docker_trust_user1 ; then
-      chroot $1 sh -c "adduser $KSconf_device_user docker"
-   fi
+# If requested, trust the device user with Docker (when the 'docker' group exists)
+if [ "${KSconf_meta_docker_trust_user:-n}" = "y" ]; then
+  chroot "$1" sh -eu -c '
+    if getent group docker >/dev/null 2>&1; then
+      adduser "'"$U"'" docker
+    fi
+  '
 fi
 
-if grep-dctrl -q -XFStatus "install ok installed" -a \
-   -XFPackage openssh-server $1/var/lib/dpkg/status ; then
-   if [ -d $1/home/${KSconf_device_user}/.ssh ] ; then
-      chroot $1 bash -- <<- EOCHROOT
-      chown -R ${KSconf_device_user}:${KSconf_device_user} /home/${KSconf_device_user}/.ssh
-      chmod 0700 /home/${KSconf_device_user}/.ssh
-      if [ -f /home/${KSconf_device_user}/.ssh/authorized_keys ] ; then
-         chmod 0600 /home/${KSconf_device_user}/.ssh/authorized_keys
-      fi
-EOCHROOT
-   fi
-fi
+# If ~/.ssh exists for the device user, fix ownership and permissions
+chroot "$1" sh -eu -c '
+  H="/home/'"$U"'"
+  if [ -d "$H/.ssh" ]; then
+    chown -R "'"$U"':'"$U"'" "$H/.ssh"
+    chmod 0700 "$H/.ssh"
+    if [ -f "$H/.ssh/authorized_keys" ]; then
+      chmod 0600 "$H/.ssh/authorized_keys"
+    fi
+  fi
+'

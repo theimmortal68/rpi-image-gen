@@ -8,7 +8,7 @@ mmdebstrap:
     - install -d -m 0755 "$(test -d "$1/boot/firmware" && echo "$1/boot/firmware" || echo "$1/boot")"
     - install -m 0644 "$KS_TEMPLATES/headless-nm/headless_nm.txt.template" "$(test -d "$1/boot/firmware" && echo "$1/boot/firmware" || echo "$1/boot")/headless_nm.txt.template"
     - install -m 0644 "$KS_TEMPLATES/headless-nm/WiFi-README.txt" "$(test -d "$1/boot/firmware" && echo "$1/boot/firmware" || echo "$1/boot")/WiFi-README.txt"
-    - sed -i "s|OS_NAME|${DIST_NAME:-Debian}|g" "$(test -d "$1/boot/firmware" && echo "$1/boot/firmware" || echo "$1/boot")/WiFi-README.txt"
+    - sed -i "s|OS_NAME|${KSconf_sys_dist_name:-Debian}|g" "$(test -d "$1/boot/firmware" && echo "$1/boot/firmware" || echo "$1/boot")/WiFi-README.txt"
 
     # Install systemd unit and helper script
     - install -d -m 0755 "$1/etc/systemd/system"
