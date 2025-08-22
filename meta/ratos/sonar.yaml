@@ -1,0 +1,38 @@
+---
+name: ratos-sonar
+mmdebstrap:
+  variant: apt
+  packages: []
+  customize-hooks:
+    # --- Clone sonar into the device user's home (shallow)
+    - >
+      chroot "$1" sh -eu -c '
+        USER="$IGconf_device_user1"
+        cd "/home/$IGconf_device_user1"
+        runuser -u "$USER" -- sh -c "git clone --depth 1 https://github.com/mainsail-crew/sonar.git sonar"
+      '
+
+    # --- Create sonar tools/.config with project vars
+    - >
+      chroot "$1" sh -eu -c '
+        USER="$IGconf_device_user1"
+        CFG="/home/$IGconf_device_user1/sonar/tools/.config"
+        install -d -m 0755 "/home/$IGconf_device_user1/sonar/tools"
+        {
+          echo "BASE_USER=\"$IGconf_device_user1\""
+          echo "SONAR_DATA_PATH=\"/home/$IGconf_device_user1/printer_data\""
+          echo "SONAR_ADD_SONAR_MOONRAKER=\"1\""
+          echo "SONAR_UNATTENDED=\"1\""
+        } > "$CFG"
+      '
+
+    # --- Run install (non-interactive via config), then remove config
+    - >
+      chroot "$1" sh -eu -c '
+        cd "/home/$IGconf_device_user1/sonar"
+        make install
+        rm -f "./tools/.config"
+      '
+
+    # --- Enable the sonar service using the bdebstrap helper (no .service suffix)
+    - '"$BDEBSTRAP_HOOKS/enable-units" "$1" sonar'
