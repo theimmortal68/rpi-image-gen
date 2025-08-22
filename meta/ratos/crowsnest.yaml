@@ -1,4 +1,4 @@
-# ratos-crowsnest.yaml
+# ratos-crowsnest.yaml (removed pkglist sourcing/apt; assumes ffmpeg, libcamera/v4l2 stack preinstalled)
 name: ratos-crowsnest
 mmdebstrap:
   variant: apt
@@ -9,19 +9,10 @@ mmdebstrap:
         U="$IGconf_device_user1"
         H="/home/$IGconf_device_user1"
 
+        # Clone crowsnest into user's home
         runuser -u "$U" -- git clone --depth 1 https://github.com/mainsail-crew/crowsnest.git "$H/crowsnest"
 
-        # Install distro packages required by crowsnest (from project script)
-        S="$H/crowsnest/tools/libs/pkglist-rpi.sh"
-        [ -r "$S" ] || { echo "Missing: $S" >&2; exit 1; }
-        PKGLIST="$(. "$S"; printf "%s" "$PKGLIST")"
-        if [ -n "$PKGLIST" ]; then
-          apt-get update
-          # shellcheck disable=SC2086
-          apt-get install -y $PKGLIST
-        fi
-
-        # Unattended install + Moonraker integration
+        # Unattended install + Moonraker integration (system deps already present)
         export CROWSNEST_UNATTENDED=1
         export CROWSNEST_ADD_CROWSNEST_MOONRAKER=1
         make -C "$H/crowsnest" install
