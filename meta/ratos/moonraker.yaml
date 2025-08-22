@@ -1,0 +1,27 @@
+---
+name: ratos-moonraker
+mmdebstrap:
+  variant: apt
+  packages: []  # relies on your prerequisite/toolchain layers (git, python, etc.)
+  customize-hooks:
+    # --- Clone Moonraker as the device user (always shallow)
+    - >
+      chroot "$1" sh -eu -c '
+        USER="$IGconf_device_user1"
+        cd /home/$IGconf_device_user1
+        runuser -u "$USER" -- sh -c "git clone --depth 1 https://github.com/Arksine/moonraker.git"
+      '
+
+    # --- Run Moonraker installer with requested switches (-s -x -z) as the device user
+    - >
+      chroot "$1" sh -eu -c '
+        USER="$IGconf_device_user1"
+        runuser -u "$USER" -- sh -c "/home/$IGconf_device_user1/moonraker/scripts/install-moonraker.sh -s -z"
+      '
+
+    # --- Ensure config directory exists
+    - 'install -d -m 0755 "$1/home/$IGconf_device_user1/printer_data/config"'
+
+    # --- Copy moonraker.conf and ensure user ownership
+    - 'install -m 0644 "$RPI_TEMPLATES/moonraker.conf" "$1/home/$IGconf_device_user1/printer_data/config/moonraker.conf"'
+    - 'chroot "$1" sh -eu -c "chown $IGconf_device_user1:$IGconf_device_user1 /home/$IGconf_device_user1/printer_data/config/moonraker.conf"'
