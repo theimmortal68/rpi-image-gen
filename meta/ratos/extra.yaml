@@ -1,7 +1,0 @@
----
-name: ratos-extras
-mmdebstrap:
-  variant: apt
-  packages:
-    - nginx
-    - ffmpeg
