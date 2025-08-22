@@ -2,21 +2,26 @@
 name: ratos-klipper
 mmdebstrap:
   variant: apt
-  packages: []   # git, python3, python3-venv, pip, etc. come from prerequisite/toolchain layers
+  packages: []   # git, python3, python3-venv, python3-pip come from prerequisite/toolchain layers
   customize-hooks:
-    # --- Clone Kalico (Klipper fork) as the device user (shallow)
+    # --- Clone Kalico (Klipper fork) as the device user (shallow, robust: no 'cd')
     - >
       chroot "$1" sh -eu -c '
-        USER="$IGconf_device_user1"
-        cd /home/$IGconf_device_user1
-        runuser -u "$USER" -- sh -c "git clone --depth 1 --branch bleeding-edge-v2 https://github.com/KalicoCrew/kalico klipper"
+        U="$IGconf_device_user1"; H="/home/$IGconf_device_user1"
+        install -d -m 0755 "$H"; chown "$U:$U" "$H"
+        runuser -u "$U" -- git -C "$H" clone --depth 1 --branch bleeding-edge-v2 https://github.com/KalicoCrew/kalico "$H/klipper"
       '
 
     # --- Create printer_data hierarchy (owned by the device user)
     - >
       chroot "$1" sh -eu -c '
-        USER="$IGconf_device_user1"
-        runuser -u "$USER" -- sh -c "install -d /home/$IGconf_device_user1/printer_data /home/$IGconf_device_user1/printer_data/config /home/$IGconf_device_user1/printer_data/comms /home/$IGconf_device_user1/printer_data/logs /home/$IGconf_device_user1/printer_data/systemd"
+        U="$IGconf_device_user1"; H="/home/$IGconf_device_user1"
+        runuser -u "$U" -- sh -c "install -d \
+          $H/printer_data \
+          $H/printer_data/config \
+          $H/printer_data/comms \
+          $H/printer_data/logs \
+          $H/printer_data/systemd"
       '
 
     # --- Sanity check: python3 must exist in the chroot
@@ -25,23 +30,23 @@ mmdebstrap:
     # --- Python venv for Klipper using stdlib venv
     - >
       chroot "$1" sh -eu -c '
-        USER="$IGconf_device_user1"
-        runuser -u "$USER" -- sh -c "/usr/bin/python3 -m venv /home/$IGconf_device_user1/klippy-env"
+        U="$IGconf_device_user1"; H="/home/$IGconf_device_user1"; V="$H/klippy-env"
+        runuser -u "$U" -- sh -c "/usr/bin/python3 -m venv \"$V\""
       '
     - >
       chroot "$1" sh -eu -c '
-        USER="$IGconf_device_user1"
-        runuser -u "$USER" -- sh -c "/home/$IGconf_device_user1/klippy-env/bin/pip install --upgrade pip setuptools wheel"
+        U="$IGconf_device_user1"; H="/home/$IGconf_device_user1"; V="$H/klippy-env"
+        runuser -u "$U" -- sh -c "\"$V/bin/pip\" install --upgrade pip setuptools wheel"
       '
     - >
       chroot "$1" sh -eu -c '
-        USER="$IGconf_device_user1"
-        runuser -u "$USER" -- sh -c "/home/$IGconf_device_user1/klippy-env/bin/pip install -r /home/$IGconf_device_user1/klipper/scripts/klippy-requirements.txt"
+        U="$IGconf_device_user1"; H="/home/$IGconf_device_user1"; V="$H/klippy-env"
+        runuser -u "$U" -- sh -c "\"$V/bin/pip\" install -r \"$H/klipper/scripts/klippy-requirements.txt\""
       '
     - >
       chroot "$1" sh -eu -c '
-        USER="$IGconf_device_user1"
-        runuser -u "$USER" -- sh -c "/home/$IGconf_device_user1/klippy-env/bin/pip install numpy"
+        U="$IGconf_device_user1"; H="/home/$IGconf_device_user1"; V="$H/klippy-env"
+        runuser -u "$U" -- sh -c "\"$V/bin/pip\" install numpy"
       '
 
     # --- Install systemd unit + env file (host-side copy), then fix ownership of the env
@@ -54,16 +59,16 @@ mmdebstrap:
     # --- Pre-compile Klipper (Python .pyc), as device user
     - >
       chroot "$1" sh -eu -c '
-        USER="$IGconf_device_user1"
-        runuser -u "$USER" -- sh -c "/home/$IGconf_device_user1/klippy-env/bin/python -m compileall /home/$IGconf_device_user1/klipper/klippy"
+        U="$IGconf_device_user1"; H="/home/$IGconf_device_user1"; V="$H/klippy-env"
+        runuser -u "$U" -- sh -c "\"$V/bin/python\" -m compileall \"$H/klipper/klippy\""
       '
 
     # --- Pre-compile C chelper, as device user
     - >
       chroot "$1" sh -eu -c '
-        USER="$IGconf_device_user1"
-        runuser -u "$USER" -- sh -c "/home/$IGconf_device_user1/klippy-env/bin/python /home/$IGconf_device_user1/klipper/klippy/chelper/__init__.py"
+        U="$IGconf_device_user1"; H="/home/$IGconf_device_user1"; V="$H/klippy-env"
+        runuser -u "$U" -- sh -c "\"$V/bin/python\" \"$H/klipper/klippy/chelper/__init__.py\""
       '
 
-    # --- Enable the service using the bdebstrap helper
+    # --- Enable the service using the bdebstrap helper (no .service suffix)
     - '"$BDEBSTRAP_HOOKS/enable-units" "$1" klipper'
