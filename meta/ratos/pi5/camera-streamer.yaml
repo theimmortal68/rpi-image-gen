@@ -9,7 +9,7 @@ mmdebstrap:
       chroot "$1" /bin/sh -eu -c '
         # Access to camera/video
         for g in video render input i2c gpio; do
-          adduser "${KSconf_device_user1}" "$g"
+          adduser "${KSconf_device_user}" "$g"
         done
 
         # Autoload i2c-dev (harmless if not used)

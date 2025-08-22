@@ -37,4 +37,4 @@ mmdebstrap:
           install -d \"$H/printer_data/config\"
           ln -sfn \"$H/mainsail-config/mainsail.cfg\" \"$H/printer_data/config/mainsail.cfg\"
         "
-      ' -- "$KSconf_device_user1"
+      ' -- "$KSconf_device_user"

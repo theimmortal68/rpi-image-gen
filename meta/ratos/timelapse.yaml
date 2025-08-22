@@ -6,8 +6,8 @@ mmdebstrap:
   customize-hooks:
     - |-
       chroot "$1" /bin/sh -eu -c '
-        U="$KSconf_device_user1"
-        H="/home/$KSconf_device_user1"
+        U="$KSconf_device_user"
+        H="/home/$KSconf_device_user"
 
         runuser -u "$U" -- git clone --depth 1 https://github.com/mainsail-crew/moonraker-timelapse.git "$H/moonraker-timelapse"
 

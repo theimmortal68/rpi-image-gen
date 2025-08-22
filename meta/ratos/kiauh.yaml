@@ -7,7 +7,7 @@ mmdebstrap:
     # --- Clone KIAUH into the device user's home (shallow)
     - >
       chroot "$1" sh -eu -c '
-        USER="$KSconf_device_user1"
-        cd /home/$KSconf_device_user1
+        USER="$KSconf_device_user"
+        cd /home/$KSconf_device_user
         runuser -u "$USER" -- sh -c "git clone --depth 1 https://github.com/dw-0/kiauh.git"
       '
