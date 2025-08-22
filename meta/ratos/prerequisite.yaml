@@ -27,6 +27,13 @@ mmdebstrap:
     - can-utils
     - ffmpeg
     - nginx
+    - libevent-dev
+    - libjpeg-dev 
+    - libbsd-dev 
+    - crudini 
+    - bsdutils 
+    - findutils 
+    - v4l-utils
   customize-hooks:
     - |-
       chroot "$1" /bin/sh -eu -c '
