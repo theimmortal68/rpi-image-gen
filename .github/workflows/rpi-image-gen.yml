@@ -31,11 +31,25 @@ jobs:
           remove-dotnet: 'true'
           remove-android: 'true'
           remove-haskell: 'true'
-          remove-codeql: 'true'
-          remove-docker-images: 'true'
-          remove-cached-tools: 'true'
-          remove-homebrew: 'true'
           # build-mount-path defaults to $GITHUB_WORKSPACE
+
+      - name: Extra cleanup (CodeQL, Docker images, cached tools, Homebrew)
+        run: |
+          set -eux
+          # CodeQL
+          sudo rm -rf /opt/hostedtoolcache/CodeQL || true
+          # Docker images
+          if command -v docker >/dev/null 2>&1; then
+            sudo docker image prune -af || true
+            sudo docker system prune -af --volumes || true
+          fi
+          # Hosted toolcache (old SDKs/toolchains)
+          sudo rm -rf /opt/hostedtoolcache/* || true
+          # Homebrew (on ubuntu images it’s under /home/linuxbrew)
+          sudo rm -rf /home/linuxbrew /home/runner/.linuxbrew || true
+          # Misc caches
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /usr/local/share/powershell || true
 
       - name: Install host deps from repo script
         run: |
