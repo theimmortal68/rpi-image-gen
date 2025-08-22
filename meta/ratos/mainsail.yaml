@@ -12,6 +12,9 @@ mmdebstrap:
     - 'install -D -m 0644 "$RPI_TEMPLATES/mainsail/common_vars.conf" "$1/etc/nginx/conf.d/common_vars.conf"'
     - 'install -D -m 0644 "$RPI_TEMPLATES/mainsail/upstreams.conf"   "$1/etc/nginx/conf.d/upstreams.conf"'
 
+    # --- Copy extra logrotate rule from templates
+    - 'install -D -m 0644 "$RPI_TEMPLATES/mainsail/rsyslog" "$1/etc/logrotate.d/rsyslog"'
+
     # --- Enable the site
     - 'install -d -m 0755 "$1/etc/nginx/sites-enabled"'
     - 'ln -sfn /etc/nginx/sites-available/mainsail "$1/etc/nginx/sites-enabled/mainsail"'
