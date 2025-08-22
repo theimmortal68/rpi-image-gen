@@ -51,12 +51,14 @@ mmdebstrap:
     - 'install -m 0644 "$RPI_TEMPLATES/klipper/klipper.env" "$1/home/$IGconf_device_user1/printer_data/systemd/klipper.env"'
     - 'chroot "$1" sh -eu -c "chown $IGconf_device_user1:$IGconf_device_user1 /home/$IGconf_device_user1/printer_data/systemd/klipper.env"'
 
-    # --- Pre-compile Klipper (Python .pyc and C chelper), as device user
+    # --- Pre-compile Klipper (Python .pyc), as device user
     - >
       chroot "$1" sh -eu -c '
         USER="$IGconf_device_user1"
         runuser -u "$USER" -- sh -c "/home/$IGconf_device_user1/klippy-env/bin/python -m compileall /home/$IGconf_device_user1/klipper/klippy"
       '
+
+    # --- Pre-compile C chelper, as device user
     - >
       chroot "$1" sh -eu -c '
         USER="$IGconf_device_user1"
