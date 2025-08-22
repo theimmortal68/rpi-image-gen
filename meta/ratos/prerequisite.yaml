@@ -21,20 +21,18 @@ mmdebstrap:
     - pkg-config
     - uuid
     - gnupg
-    - unzip 
+    - unzip
   customize-hooks:
     - |-
       chroot "$1" /bin/sh -eu -c '
         # 1) pip: add piwheels once
         if [ ! -f /etc/pip.conf ]; then
-          echo "Adding piwheels to /etc/pip.conf"
           printf "%s\n" "[global]" > /etc/pip.conf
           printf "%s\n" "extra-index-url=https://www.piwheels.org/simple" >> /etc/pip.conf
           chmod 0644 /etc/pip.conf
         fi
 
         # 2) Node.js (NodeSource 22.x) inside the chroot
-        # The setup script requires bash; we installed bash above.
         curl -fsSL https://deb.nodesource.com/setup_22.x -o /tmp/nodesource.sh
         bash /tmp/nodesource.sh
         apt-get update
@@ -43,4 +41,14 @@ mmdebstrap:
 
         # 3) pnpm (after nodejs/npm exist)
         npm install -g pnpm
+      '
+
+    # 4) AFTER NodeSource: fix any accidental 'mainn' component and refresh apt
+    - >
+      chroot "$1" sh -eu -c '
+        for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.list; do
+          [ -f "$f" ] || continue
+          sed -Ei "s/(\s)mainn(\s|$)/\1main\2/g" "$f"
+        done
+        apt-get update
       '
