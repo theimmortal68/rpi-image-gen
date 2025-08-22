@@ -1,37 +1,25 @@
----
+# ratos-timelapse.yaml
 name: ratos-timelapse
 mmdebstrap:
   variant: apt
   packages: []
   customize-hooks:
-    # --- Clone moonraker-timelapse into the device user's home (shallow)
-    - >
-      chroot "$1" sh -eu -c '
-        USER="$IGconf_device_user1"
-        REPO="https://github.com/mainsail-crew/moonraker-timelapse.git"
-        SRC_DIR="/home/$IGconf_device_user1/moonraker-timelapse"
-        cd "/home/$IGconf_device_user1"
-        runuser -u "$USER" -- sh -c "git clone --depth 1 $REPO \"$SRC_DIR\""
-      '
+    - |-
+      chroot "$1" /bin/sh -eu -c '
+        U="$IGconf_device_user1"
+        H="/home/$IGconf_device_user1"
 
-    # --- Link Moonraker component if the components path exists
-    - >
-      chroot "$1" sh -eu -c '
-        USER="$IGconf_device_user1"
-        SRC_DIR="/home/$IGconf_device_user1/moonraker-timelapse"
-        MOONRAKER_COMPONENTS_PATH="/home/$IGconf_device_user1/moonraker/moonraker/components"
-        if [ -d "$MOONRAKER_COMPONENTS_PATH" ]; then
-          runuser -u "$USER" -- sh -c "ln -sfn \"$SRC_DIR/component/timelapse.py\" \"$MOONRAKER_COMPONENTS_PATH/timelapse.py\""
-        fi
-      '
+        runuser -u "$U" -- git clone --depth 1 https://github.com/mainsail-crew/moonraker-timelapse.git "$H/moonraker-timelapse"
 
-    # --- Link Klipper macro into printer config if that path exists
-    - >
-      chroot "$1" sh -eu -c '
-        USER="$IGconf_device_user1"
-        SRC_DIR="/home/$IGconf_device_user1/moonraker-timelapse"
-        PRINTER_CONFIG_PATH="/home/$IGconf_device_user1/printer_data/config"
-        if [ -d "$PRINTER_CONFIG_PATH" ]; then
-          runuser -u "$USER" -- sh -c "ln -sfn \"$SRC_DIR/klipper_macro/timelapse.cfg\" \"$PRINTER_CONFIG_PATH/timelapse.cfg\""
+        # Link Moonraker component if Moonraker exists
+        C="$H/moonraker/moonraker/components"
+        if [ -d "$C" ]; then
+          runuser -u "$U" -- ln -sfn "$H/moonraker-timelapse/component/timelapse.py" "$C/timelapse.py"
         fi
+
+        # Link Klipper macro into printer config
+        runuser -u "$U" -- sh -eu -c "
+          install -d \"$H/printer_data/config\"
+          ln -sfn \"$H/moonraker-timelapse/klipper_macro/timelapse.cfg\" \"$H/printer_data/config/timelapse.cfg\"
+        "
       '
