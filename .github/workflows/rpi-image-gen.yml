@@ -16,11 +16,6 @@ jobs:
       DIST_NAME: ratos
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # optional
-
       # Expand usable disk (merge / and /mnt; add swap; remove big preinstalls)
       - name: Maximize build disk space
         uses: easimon/maximize-build-space@v1
@@ -32,6 +27,10 @@ jobs:
           remove-android: 'true'
           remove-haskell: 'true'
           # build-mount-path defaults to $GITHUB_WORKSPACE
+
+      # ensure the newly mounted workspace is writable by 'runner'
+      - name: Fix workspace ownership
+        run: sudo chown -R "$USER":"$USER" "$GITHUB_WORKSPACE"
 
       - name: Extra cleanup (CodeQL, Docker images, cached tools, Homebrew)
         run: |
@@ -50,6 +49,11 @@ jobs:
           # Misc caches
           sudo rm -rf /usr/local/lib/android || true
           sudo rm -rf /usr/local/share/powershell || true
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # optional
 
       - name: Install host deps from repo script
         run: |
