@@ -4,6 +4,10 @@ on:
   workflow_dispatch:
   push:
     branches: [ master ]
+    
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -12,8 +16,8 @@ jobs:
       contents: write
     env:
       DEBIAN_FRONTEND: noninteractive
-      KS_HELPERS: ${{ github.workspace }}/ks_helpers
-      DIST_NAME: ratos
+      APT_LISTCHANGES_FRONTEND: none
+      NEEDRESTART_MODE: a
 
     steps:
       # Expand usable disk (merge / and /mnt; add swap; remove big preinstalls)
