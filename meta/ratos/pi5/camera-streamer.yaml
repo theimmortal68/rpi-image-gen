@@ -4,7 +4,6 @@ mmdebstrap:
   variant: apt
   packages:
     - ustreamer           # MJPEG HTTP streamer for V4L2 devices
-    - v4l-utils           # v4l2-ctl, media-ctl etc.
   customize-hooks:
     - |-
       chroot "$1" /bin/sh -eu -c '
