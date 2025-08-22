@@ -1,4 +1,4 @@
-# ratos-moonraker.yaml (fixed)
+# ratos-moonraker.yaml
 name: ratos-moonraker
 mmdebstrap:
   variant: apt
@@ -8,7 +8,7 @@ mmdebstrap:
     - |-
       chroot "$1" /bin/sh -eu -c '
         U="$1"
-        H="/home/$1"
+        H="/home/$U"
         ENV_DIR="$H/moonraker-env"
 
         # Clone Moonraker as the device user
@@ -21,7 +21,7 @@ mmdebstrap:
 
         # Ensure printer_data/config exists (ok if it already exists)
         runuser -u "$U" -- install -d "$H/printer_data/config"
-      ' -- "$IGconf_device_user1"
+      ' _ "$IGconf_device_user1"
 
     # --- Host-side: drop service + config from templates, then enable unit
     - |-
@@ -34,4 +34,4 @@ mmdebstrap:
         "$1/home/$IGconf_device_user1/printer_data/config/moonraker.conf"
 
       # Enable via your helper (no .service suffix)
-      "$BDEBSTRAP_HOOKS/enable-units" "$1" moonraker
+      "$BDEBSTRAP_HOOKS/enable-units" "$1" moonraker      "$BDEBSTRAP_HOOKS/enable-units" "$1" moonraker
