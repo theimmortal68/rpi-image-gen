@@ -1,21 +1,37 @@
-# ratos-moonraker.yaml
+# ratos-moonraker.yaml (fixed)
 name: ratos-moonraker
 mmdebstrap:
   variant: apt
   packages: []
   customize-hooks:
+    # --- In-chroot: user-scoped work (username passed as $1)
     - |-
       chroot "$1" /bin/sh -eu -c '
-        U="$IGconf_device_user1"
-        H="/home/$IGconf_device_user1"
+        U="$1"
+        H="/home/$1"
+        ENV_DIR="$H/moonraker-env"
 
-        # Clone as user
+        # Clone Moonraker as the device user
         runuser -u "$U" -- git clone --depth 1 https://github.com/Arksine/moonraker.git "$H/moonraker"
 
-        # Install unattended (-s -z)
-        runuser -u "$U" -- sh -eu -c "\"$H/moonraker/scripts/install-moonraker.sh\" -s -z"
+        # Create a dedicated venv for Moonraker and install deps
+        runuser -u "$U" -- /usr/bin/python3 -m venv "$ENV_DIR"
+        runuser -u "$U" -- "$ENV_DIR/bin/pip" install --upgrade pip setuptools wheel
+        runuser -u "$U" -- "$ENV_DIR/bin/pip" install -r "$H/moonraker/requirements.txt"
 
-        # Config: drop moonraker.conf from templates as user
-        runuser -u "$U" -- sh -eu -c "install -D -m 0644 \"$RPI_TEMPLATES/moonraker.conf\" \"$H/printer_data/config/moonraker.conf\""
-      '
-    - '"$BDEBSTRAP_HOOKS/enable-units" "$1" moonraker'
+        # Ensure printer_data/config exists (ok if it already exists)
+        runuser -u "$U" -- install -d "$H/printer_data/config"
+      ' -- "$IGconf_device_user1"
+
+    # --- Host-side: drop service + config from templates, then enable unit
+    - |-
+      # Service file from templates
+      install -D -m 0644 "$RPI_TEMPLATES/moonraker/moonraker.service" \
+        "$1/etc/systemd/system/moonraker.service"
+
+      # Moonraker config from templates into the user's tree
+      install -D -m 0644 "$RPI_TEMPLATES/moonraker.conf" \
+        "$1/home/$IGconf_device_user1/printer_data/config/moonraker.conf"
+
+      # Enable via your helper (no .service suffix)
+      "$BDEBSTRAP_HOOKS/enable-units" "$1" moonraker
