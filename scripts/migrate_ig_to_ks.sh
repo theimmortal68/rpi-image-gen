@@ -11,13 +11,18 @@ set -euo pipefail
 ## -------------------- configuration --------------------
 
 # Core token replacements (helpers/paths/env). Format: 'old|new'
+# add to MAP_BASE
 declare -a MAP_BASE=(
   'RPI_TEMPLATES|KS_TEMPLATES'
   'BDEBSTRAP_HOOKS|KS_HELPERS'
   'KS_TEMPLATES_RPI|KS_TEMPLATES'
   'IG_TEMPLATES|KS_TEMPLATES'
   'IG_HOOKS|KS_HELPERS'
-  'META_HOOKS\b|KS_META_HOOKS_DIR'   # \b keeps META_HOOKS_DIR safe
+  'META_HOOKS\b|KS_META_HOOKS_DIR'
+  '\bIGTOP\b|KS_TOP'
+  '\bIGIMAGE\b|KS_IMAGE'
+  '\bIGDEVICE\b|KS_DEVICE'
+  '\bIGPROFILE\b|KS_PROFILE'   # optional, if present
 )
 
 # Optional config prefix migration
@@ -200,7 +205,7 @@ fi
 changed=0
 while read -r f; do
   # fast prefilter: skip files with no triggers
-  if ! grep -E -q 'RPI_TEMPLATES|BDEBSTRAP_HOOKS|KS_TEMPLATES_RPI|IG_TEMPLATES|IG_HOOKS|META_HOOKS|IGconf_|IGCONF_' "$f"; then
+  if ! grep -E -q 'KS_TEMPLATES|KS_HELPERS|KS_TEMPLATES|KS_TEMPLATES|KS_HELPERS|KS_META_HOOKS_DIR|IGconf_|IGCONF_' "$f"; then
     continue
   fi
 

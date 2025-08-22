@@ -6,8 +6,8 @@ mmdebstrap:
   customize-hooks:
     - |-
       chroot "$1" /bin/sh -eu -c '
-        U="$IGconf_device_user1"
-        H="/home/$IGconf_device_user1"
+        U="$KSconf_device_user1"
+        H="/home/$KSconf_device_user1"
 
         runuser -u "$U" -- git clone --depth 1 https://github.com/mainsail-crew/sonar.git "$H/sonar"
 
@@ -25,4 +25,4 @@ mmdebstrap:
         make -C "$H/sonar" install
         runuser -u "$U" -- rm -f "$H/sonar/tools/.config"
       '
-    - '"$BDEBSTRAP_HOOKS/enable-units" "$1" sonar'
+    - '"$KS_HELPERS/enable-units" "$1" sonar'

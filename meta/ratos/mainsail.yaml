@@ -7,10 +7,10 @@ mmdebstrap:
     # Host-side: install nginx templates, tweak logrotate, wire symlink
     - |-
       rm -f "$1/etc/nginx/sites-enabled/default"
-      install -D -m 0644 "$RPI_TEMPLATES/mainsail/mainsail"        "$1/etc/nginx/sites-available/mainsail"
-      install -D -m 0644 "$RPI_TEMPLATES/mainsail/common_vars.conf" "$1/etc/nginx/conf.d/common_vars.conf"
-      install -D -m 0644 "$RPI_TEMPLATES/mainsail/upstreams.conf"   "$1/etc/nginx/conf.d/upstreams.conf"
-      install -D -m 0644 "$RPI_TEMPLATES/mainsail/rsyslog"          "$1/etc/logrotate.d/rsyslog"
+      install -D -m 0644 "$KS_TEMPLATES/mainsail/mainsail"        "$1/etc/nginx/sites-available/mainsail"
+      install -D -m 0644 "$KS_TEMPLATES/mainsail/common_vars.conf" "$1/etc/nginx/conf.d/common_vars.conf"
+      install -D -m 0644 "$KS_TEMPLATES/mainsail/upstreams.conf"   "$1/etc/nginx/conf.d/upstreams.conf"
+      install -D -m 0644 "$KS_TEMPLATES/mainsail/rsyslog"          "$1/etc/logrotate.d/rsyslog"
       mkdir -p "$1/etc/nginx/sites-enabled"
       ln -sfn /etc/nginx/sites-available/mainsail "$1/etc/nginx/sites-enabled/mainsail"
       sed -i 's/rotate 14/rotate 2/' "$1/etc/logrotate.d/nginx" || true
@@ -37,4 +37,4 @@ mmdebstrap:
           install -d \"$H/printer_data/config\"
           ln -sfn \"$H/mainsail-config/mainsail.cfg\" \"$H/printer_data/config/mainsail.cfg\"
         "
-      ' -- "$IGconf_device_user1"
+      ' -- "$KSconf_device_user1"

@@ -194,11 +194,11 @@ The user options file, and files containing default settings, are shell fragment
 
 Both file types support comments, and empty lines are ignored.
 
-The loading of defaults settings or the config file will only set a variable if it is unset, i.e. their assignments are 'aggregated'. The user options file can override any variable. For example, if variable ```IGconf_image_name``` was set in the Environment it would not be set by the loading of image defaults or the config file. It would, however, be set if the user options file assigned ```image_name``` to a non-empty string. If the user options file assigned it as empty it would be unset. When the declarative syntax is parsed, it does not support setting a variable to be empty. If a variable is assigned as empty it will be treated as being unset. Because of this, the user options file is re-read at the end of parsing to ensure it is able to override any previously set variables to be unset if necessary.
+The loading of defaults settings or the config file will only set a variable if it is unset, i.e. their assignments are 'aggregated'. The user options file can override any variable. For example, if variable ```KSconf_image_name``` was set in the Environment it would not be set by the loading of image defaults or the config file. It would, however, be set if the user options file assigned ```image_name``` to a non-empty string. If the user options file assigned it as empty it would be unset. When the declarative syntax is parsed, it does not support setting a variable to be empty. If a variable is assigned as empty it will be treated as being unset. Because of this, the user options file is re-read at the end of parsing to ensure it is able to override any previously set variables to be unset if necessary.
 
 As mentioned above, rpi-image-gen automatically applies a global prefix for all variables it parses from files and it applies a scope specific prefix to variables declared in config files and defaults. This 'translation' of variable parsing ensures variables automatically adhere to their defined scope. Unsupported config file sections are ignored. Variables set from the options file will be ```IGconf``` prefixed and translated as-is. Translation includes the variable name being converted to lower case. A variable is said to be 'fully qualified' after parsing and when prefixed with ```IGconf```. All fully qualified variables are propagated and made available to YAML layers and hooks via their execution environment.
 
-**Note1:** rpi-image-gen variables set from the Environment must be fully qualified otherwise they will be ignored. For example, to set the Device Class from the Environment, set variable ```IGconf_device_class``` accordingly. To set it from the user options file, assign variable ```device_class```.
+**Note1:** rpi-image-gen variables set from the Environment must be fully qualified otherwise they will be ignored. For example, to set the Device Class from the Environment, set variable ```KSconf_device_class``` accordingly. To set it from the user options file, assign variable ```device_class```.
 
 **Note2:** Exceptions to this are the individual ```meta``` layer default files which are loaded at the same time as their corresponding YAML layer.
 
@@ -222,7 +222,7 @@ These are equivalent: +
 Default
 
 ----
-IGconf_device_class=pi5
+KSconf_device_class=pi5
 ----
 
 Config
@@ -245,19 +245,19 @@ Processing the input sources and aggregating the variables this way allows the s
 Default
 
 ----
-IGconf_device_class=pi5
-IGconf_image_suffix=img
+KSconf_device_class=pi5
+KSconf_image_suffix=img
 ----
 
 Options
 
 ----
-image_suffix=${IGconf_device_class}.bin
+image_suffix=${KSconf_device_class}.bin
 ----
 
 Yields:
 ----
-IGconf_image_suffix=pi5.bin
+KSconf_image_suffix=pi5.bin
 ----
 
 [TIP]
@@ -270,7 +270,7 @@ Via the Options file or a supported Config file section, it is possible to defin
 Environment
 
 ----
-IGconf_device_user1=pi
+KSconf_device_user1=pi
 ----
 
 Config
@@ -290,16 +290,16 @@ Options
 
 ----
 sys_debug_port=
-sys_debug_user=$IGconf_user1
+sys_debug_user=$KSconf_user1
 sys_debugger=disabled
 ----
 
 Yields
 
 ----
-IGconf_sys_flavour=debug
-IGconf_sys_debugger=disabled
-IGconf_sys_debug_user=pi
+KSconf_sys_flavour=debug
+KSconf_sys_debugger=disabled
+KSconf_sys_debug_user=pi
 ----
 
 [TIP]
@@ -355,7 +355,7 @@ A number of 'core hooks' are installed via bdebstrap command line arguments. The
 
 rpi-image-gen runs bdebstrap in a new Linux namespace via ```podman unshare```. This is required so that bdebstrap creates files with the correct ownership information, which is particularly important when creating a chroot that contains a user account. See podman-unshare(1) and user_namespaces(7) for further details.
 
-Before bdebstrap invokes mmdebstrap to begin creation of the chroot, it writes the fully aggregated and merged YAML to ```$IGconf_sys_outputdir``` as ```config.yaml```. This is an incredibly useful file because it's essentially the 'recipe' for generating the chroot. It also creates a file called ```manifest``` in the same directory which lists all the packages that were installed in the chroot. 
+Before bdebstrap invokes mmdebstrap to begin creation of the chroot, it writes the fully aggregated and merged YAML to ```$KSconf_sys_outputdir``` as ```config.yaml```. This is an incredibly useful file because it's essentially the 'recipe' for generating the chroot. It also creates a file called ```manifest``` in the same directory which lists all the packages that were installed in the chroot. 
 
 The mmdebstrap execution is not regarded as in the scope of this document. mmdebstrap follows the rules governed by its design and by the configuration provided to it by bdebstrap. In turn, the vast majority of bdebstrap configuration is derived from the YAML layers provided to it by rpi-image-gen. From this point of view, rpi-image-gen could be regarded as a thin toolkit wrapper with which to design a system purely from YAML constructs and a set of environment variables. The application of both these things, once understood, is very powerful and provides the means to create a completely customised rootfs.
 
@@ -385,7 +385,7 @@ mmdebstrap:
 
 === SBOM
 
-A SBOM should be a reproducible and immutable artefact of the build. Generation of it takes place at the end of the post-build stage after all other hooks have run, and immediately before ```genimage``` invocation. It is not advised to perform any operation on the rootfs that could affect the data encapsulated by the SBOM after it has been generated. The SBOM is generated using ```syft``` (https://github.com/anchore/syft) which will be downloaded if not installed on the host. The SBOM is written to the image output directory (```IGconf_sys_outputdir```) and its output format is configurable via the ```SBOM_OUTPUT_FORMAT``` variable which can be set via the Config or Options file. The output format is currently the only option available to the user.
+A SBOM should be a reproducible and immutable artefact of the build. Generation of it takes place at the end of the post-build stage after all other hooks have run, and immediately before ```genimage``` invocation. It is not advised to perform any operation on the rootfs that could affect the data encapsulated by the SBOM after it has been generated. The SBOM is generated using ```syft``` (https://github.com/anchore/syft) which will be downloaded if not installed on the host. The SBOM is written to the image output directory (```KSconf_sys_outputdir```) and its output format is configurable via the ```SBOM_OUTPUT_FORMAT``` variable which can be set via the Config or Options file. The output format is currently the only option available to the user.
 
 For example, these are equivalent: +
 
@@ -402,7 +402,7 @@ Options
 SBOM_OUTPUT_FORMAT=cyclonedx-json
 ----
 
-The value of ```IGconf_sbom_output_format``` is passed directly to syft. Please refer to the syft documentation for the supported output formats. Nothing in the rootfs is excluded from the SBOM scan. syft is invoked via ```podman unshare``` so it can execute with the same privileges as bdebstrap did when the rootfs was created.
+The value of ```KSconf_sbom_output_format``` is passed directly to syft. Please refer to the syft documentation for the supported output formats. Nothing in the rootfs is excluded from the SBOM scan. syft is invoked via ```podman unshare``` so it can execute with the same privileges as bdebstrap did when the rootfs was created.
 
 Utilisation of the SBOM is beyond the scope of this document. However, the following is offered as an example of how the SBOM could be used to generate a report of known CVEs using grype (https://github.com/anchore/grype):
 
@@ -493,4 +493,4 @@ Only one of these hooks is executed. The device pre-image hook has priority. If 
 
    Image layout owned post-image operations.
 
-Only one of these hooks is executed. The device post-image hook has priority. If it exists, it will be executed. If it doesn't and the image layout post-image hook exists, that will be executed. If neither exist, a default post-image hook will be executed. It is the responsibility of the post-image hook to perform all operations required to deploy artefacts to ```IGconf_sys_deploydir```, for example compressing image and SBOM.
+Only one of these hooks is executed. The device post-image hook has priority. If it exists, it will be executed. If it doesn't and the image layout post-image hook exists, that will be executed. If neither exist, a default post-image hook will be executed. It is the responsibility of the post-image hook to perform all operations required to deploy artefacts to ```KSconf_sys_deploydir```, for example compressing image and SBOM.

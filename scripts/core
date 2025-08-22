@@ -29,8 +29,8 @@ assignv() {
 # BAR=yyy
 #
 # will yield:
-# IGconf_mysection_foo=zzz
-# IGconf_mysection_bar=yyy
+# KSconf_mysection_foo=zzz
+# KSconf_mysection_bar=yyy
 #
 merge_config_section() {
    local section=$1
@@ -80,8 +80,8 @@ aggregate_config() {
 # BAR=yyy
 #
 # will yield:
-# IGconf_foo=zzz
-# IGconf_bar=yyy
+# KSconf_foo=zzz
+# KSconf_bar=yyy
 #
 apply_options() {
    if [[ $# -eq 2 && -f $2 ]] ; then

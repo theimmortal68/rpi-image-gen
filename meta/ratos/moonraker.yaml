@@ -21,17 +21,17 @@ mmdebstrap:
 
         # Ensure printer_data/config exists (ok if it already exists)
         runuser -u "$U" -- install -d "$H/printer_data/config"
-      ' _ "$IGconf_device_user1"
+      ' _ "$KSconf_device_user1"
 
     # --- Host-side: drop service + config from templates, then enable unit
     - |-
       # Service file from templates
-      install -D -m 0644 "$RPI_TEMPLATES/moonraker/moonraker.service" \
+      install -D -m 0644 "$KS_TEMPLATES/moonraker/moonraker.service" \
         "$1/etc/systemd/system/moonraker.service"
 
       # Moonraker config from templates into the user's tree
-      install -D -m 0644 "$RPI_TEMPLATES/moonraker.conf" \
-        "$1/home/$IGconf_device_user1/printer_data/config/moonraker.conf"
+      install -D -m 0644 "$KS_TEMPLATES/moonraker.conf" \
+        "$1/home/$KSconf_device_user1/printer_data/config/moonraker.conf"
 
       # Enable via your helper (no .service suffix)
-      "$BDEBSTRAP_HOOKS/enable-units" "$1" moonraker      "$BDEBSTRAP_HOOKS/enable-units" "$1" moonraker
+      "$KS_HELPERS/enable-units" "$1" moonraker      "$KS_HELPERS/enable-units" "$1" moonraker

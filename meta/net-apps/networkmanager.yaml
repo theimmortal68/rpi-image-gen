@@ -37,4 +37,4 @@ mmdebstrap:
         NMCONF
         chmod 600 /etc/NetworkManager/system-connections/eth0.nmconnection
       '
-    - $BDEBSTRAP_HOOKS/enable-units "$1" NetworkManager
+    - $KS_HELPERS/enable-units "$1" NetworkManager

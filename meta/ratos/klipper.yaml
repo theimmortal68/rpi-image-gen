@@ -27,14 +27,14 @@ mmdebstrap:
         # Pre-compile klippy to warm caches
         runuser -u "$U" -- "$ENV_DIR/bin/python" -m compileall "$H/klipper/klippy"
         runuser -u "$U" -- "$ENV_DIR/bin/python" "$H/klipper/klippy/chelper/__init__.py"
-      ' -- "$IGconf_device_user1"
+      ' -- "$KSconf_device_user1"
 
     # --- Host-side: copy unit/env from templates, then enable units (single step)
     - |-
       install -d -m 0755 "$1/etc/systemd/system"
-      install -m 0644 "$RPI_TEMPLATES/klipper/klipper.service" "$1/etc/systemd/system/klipper.service"
+      install -m 0644 "$KS_TEMPLATES/klipper/klipper.service" "$1/etc/systemd/system/klipper.service"
 
-      install -d -m 0755 "$1/home/$IGconf_device_user1/printer_data/systemd"
-      install -m 0644 "$RPI_TEMPLATES/klipper/klipper.env" "$1/home/$IGconf_device_user1/printer_data/systemd/klipper.env"
+      install -d -m 0755 "$1/home/$KSconf_device_user1/printer_data/systemd"
+      install -m 0644 "$KS_TEMPLATES/klipper/klipper.env" "$1/home/$KSconf_device_user1/printer_data/systemd/klipper.env"
 
-      "$BDEBSTRAP_HOOKS/enable-units" "$1" klipper
+      "$KS_HELPERS/enable-units" "$1" klipper

@@ -6,4 +6,4 @@ mmdebstrap:
     - fake-hwclock
   customize-hooks:
     - date -d "@${SOURCE_DATE_EPOCH}" > $1/etc/fake-hwclock.data
-    - $BDEBSTRAP_HOOKS/enable-units "$1" fake-hwclock
+    - $KS_HELPERS/enable-units "$1" fake-hwclock
