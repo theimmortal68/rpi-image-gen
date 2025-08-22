@@ -33,6 +33,8 @@ jobs:
           remove-haskell: 'true'
           remove-codeql: 'true'
           remove-docker-images: 'true'
+          remove-cached-tools: 'true'
+          remove-homebrew: 'true'
           # build-mount-path defaults to $GITHUB_WORKSPACE
 
       - name: Install host deps from repo script
