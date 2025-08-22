@@ -4,23 +4,20 @@ mmdebstrap:
   variant: apt
   packages: []   # git, python3, python3-venv, pip, etc. come from prerequisite/toolchain layers
   customize-hooks:
-    # (Optional but helpful for cross-arch builds on x86 runners)
-    # - 'install -D /usr/bin/qemu-aarch64-static "$1/usr/bin/qemu-aarch64-static"'
-
     # --- Clone Kalico (Klipper fork) as the device user
-    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; cd /home/$IGconf_device_user1; runuser -u \\"$USER\\" -- git clone --depth 1 --branch bleeding-edge-v2 https://github.com/KalicoCrew/kalico klipper"'
+    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; cd /home/$IGconf_device_user1; runuser -u \\"$USER\\" -- sh -c '\''git clone --depth 1 --branch bleeding-edge-v2 https://github.com/KalicoCrew/kalico klipper'\''"'
 
     # --- Create printer_data hierarchy (owned by the device user)
-    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; runuser -u \\"$USER\\" -- install -d /home/$IGconf_device_user1/printer_data /home/$IGconf_device_user1/printer_data/config /home/$IGconf_device_user1/printer_data/comms /home/$IGconf_device_user1/printer_data/logs /home/$IGconf_device_user1/printer_data/systemd"'
+    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; runuser -u \\"$USER\\" -- sh -c '\''install -d /home/$IGconf_device_user1/printer_data /home/$IGconf_device_user1/printer_data/config /home/$IGconf_device_user1/printer_data/comms /home/$IGconf_device_user1/printer_data/logs /home/$IGconf_device_user1/printer_data/systemd'\''"'
 
-    # --- Sanity check: python3 must exist in the chroot (clear error if not)
+    # --- Sanity check: python3 must exist in the chroot
     - 'chroot "$1" sh -eu -c "test -x /usr/bin/python3 && /usr/bin/python3 --version >/dev/null"'
 
-    # --- Python venv for Klipper using stdlib venv (stdlib only; no host paths)
-    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; ENV_DIR=/home/$IGconf_device_user1/klippy-env; runuser -u \\"$USER\\" -- /usr/bin/python3 -m venv \\"$ENV_DIR\\""'
-    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; ENV_DIR=/home/$IGconf_device_user1/klippy-env; runuser -u \\"$USER\\" -- \\"$ENV_DIR/bin/pip\\" install --upgrade pip setuptools wheel"'
-    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; ENV_DIR=/home/$IGconf_device_user1/klippy-env; runuser -u \\"$USER\\" -- \\"$ENV_DIR/bin/pip\\" install -r /home/$IGconf_device_user1/klipper/scripts/klippy-requirements.txt"'
-    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; ENV_DIR=/home/$IGconf_device_user1/klippy-env; runuser -u \\"$USER\\" -- \\"$ENV_DIR/bin/pip\\" install numpy"'
+    # --- Python venv for Klipper using stdlib venv
+    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; runuser -u \\"$USER\\" -- sh -c '\''/usr/bin/python3 -m venv /home/$IGconf_device_user1/klippy-env'\''"'
+    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; runuser -u \\"$USER\\" -- sh -c '\''/home/$IGconf_device_user1/klippy-env/bin/pip install --upgrade pip setuptools wheel'\''"'
+    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; runuser -u \\"$USER\\" -- sh -c '\''/home/$IGconf_device_user1/klippy-env/bin/pip install -r /home/$IGconf_device_user1/klipper/scripts/klippy-requirements.txt'\''"'
+    - 'chroot "$1" sh -eu -c "USER=\\"$IGconf_device_user1\\"; runuser -u \\"$USER\\" -- sh -c '\''/home/$IGconf_device_user1/klippy-env/bin/pip install numpy'\''"'
 
     # --- Install systemd unit + env file (host-side copy), then fix ownership of the env
     - 'install -d -m 0755 "$1/etc/systemd/system"'
