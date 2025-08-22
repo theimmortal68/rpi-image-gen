@@ -1,4 +1,4 @@
-# ratos-mainsail.yaml (templates host-side; user tasks in chroot)
+---
 name: ratos-mainsail
 mmdebstrap:
   variant: apt
