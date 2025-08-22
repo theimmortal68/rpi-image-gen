@@ -1,0 +1,49 @@
+---
+name: ratos-mainsail
+mmdebstrap:
+  variant: apt
+  packages: []
+  customize-hooks:
+    # --- Remove the default Nginx site
+    - 'rm -f "$1/etc/nginx/sites-enabled/default"'
+
+    # --- Copy Nginx configs from templates
+    - 'install -D -m 0644 "$RPI_TEMPLATES/mainsail/mainsail"        "$1/etc/nginx/sites-available/mainsail"'
+    - 'install -D -m 0644 "$RPI_TEMPLATES/mainsail/common_vars.conf" "$1/etc/nginx/conf.d/common_vars.conf"'
+    - 'install -D -m 0644 "$RPI_TEMPLATES/mainsail/upstreams.conf"   "$1/etc/nginx/conf.d/upstreams.conf"'
+
+    # --- Enable the site
+    - 'install -d -m 0755 "$1/etc/nginx/sites-enabled"'
+    - 'ln -sfn /etc/nginx/sites-available/mainsail "$1/etc/nginx/sites-enabled/mainsail"'
+
+    # --- Change logrotate from 14 to 2
+    - 'sed -i "s/rotate 14/rotate 2/" "$1/etc/logrotate.d/nginx"'
+
+    # --- Link Nginx logs into the user’s logs dir
+    - 'install -d -m 0755 "$1/home/$IGconf_device_user1/printer_data/logs"'
+    - 'ln -sfn /var/log/nginx/mainsail-access.log "$1/home/$IGconf_device_user1/printer_data/logs/mainsail-access.log"'
+    - 'ln -sfn /var/log/nginx/mainsail-error.log  "$1/home/$IGconf_device_user1/printer_data/logs/mainsail-error.log"'
+
+    # --- Download and unpack Mainsail as the device user (latest release ZIP)
+    - >
+      chroot "$1" sh -eu -c '
+        USER="$IGconf_device_user1"
+        cd /home/$IGconf_device_user1
+        runuser -u "$USER" -- sh -c "wget -q --show-progress -O mainsail.zip https://github.com/mainsail-crew/mainsail/releases/latest/download/mainsail.zip"
+        runuser -u "$USER" -- sh -c "unzip -q mainsail.zip -d /home/$IGconf_device_user1/mainsail"
+        rm -f /home/$IGconf_device_user1/mainsail.zip
+      '
+
+    # --- Allow www-data to traverse the user’s home (for static serving)
+    - 'chroot "$1" sh -eu -c "gpasswd -a www-data $IGconf_device_user1 || true"'
+    - 'chmod g+x "$1/home/$IGconf_device_user1"'
+
+    # --- Install mainsail.cfg from mainsail-config repo (shallow), owned by the user
+    - >
+      chroot "$1" sh -eu -c '
+        USER="$IGconf_device_user1"
+        runuser -u "$USER" -- sh -c "git clone --depth 1 https://github.com/mainsail-crew/mainsail-config.git /home/$IGconf_device_user1/mainsail-config"
+        install -d -m 0755 /home/$IGconf_device_user1/printer_data/config
+        ln -sfn /home/$IGconf_device_user1/mainsail-config/mainsail.cfg /home/$IGconf_device_user1/printer_data/config/mainsail.cfg
+        chown -h "$USER:$USER" /home/$IGconf_device_user1/printer_data/config/mainsail.cfg
+      '
