@@ -46,9 +46,9 @@ mmdebstrap:
 
     # --- Install systemd unit + env file (host-side copy), then fix ownership of the env
     - 'install -d -m 0755 "$1/etc/systemd/system"'
-    - 'install -m 0644 "$RPI_TEMPLATES/klipper.service" "$1/etc/systemd/system/klipper.service"'
+    - 'install -m 0644 "$RPI_TEMPLATES/klipper/klipper.service" "$1/etc/systemd/system/klipper.service"'
     - 'install -d -m 0755 "$1/home/$IGconf_device_user1/printer_data/systemd"'
-    - 'install -m 0644 "$RPI_TEMPLATES/klipper.env" "$1/home/$IGconf_device_user1/printer_data/systemd/klipper.env"'
+    - 'install -m 0644 "$RPI_TEMPLATES/klipper/klipper.env" "$1/home/$IGconf_device_user1/printer_data/systemd/klipper.env"'
     - 'chroot "$1" sh -eu -c "chown $IGconf_device_user1:$IGconf_device_user1 /home/$IGconf_device_user1/printer_data/systemd/klipper.env"'
 
     # --- Enable the service without systemctl (create wants/ symlink)
