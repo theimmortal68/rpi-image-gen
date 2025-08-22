@@ -21,6 +21,20 @@ jobs:
         with:
           fetch-depth: 0  # optional
 
+      # Expand usable disk (merge / and /mnt; add swap; remove big preinstalls)
+      - name: Maximize build disk space
+        uses: easimon/maximize-build-space@v1
+        with:
+          root-reserve-mb: 512
+          swap-size-mb: 4096
+          # aggressively free space from preinstalled SDKs/images you don't use
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          remove-docker-images: 'true'
+          # build-mount-path defaults to $GITHUB_WORKSPACE
+
       - name: Install host deps from repo script
         run: |
           set -eux
