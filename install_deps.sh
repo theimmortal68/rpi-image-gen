@@ -2,9 +2,9 @@
 
 set -eu
 
-IGTOP=$(readlink -f "$(dirname "$0")")
-source "${IGTOP}/scripts/dependencies_check"
-depf=("${IGTOP}/depends")
+KS_TOP=$(readlink -f "$(dirname "$0")")
+source "${KS_TOP}/scripts/dependencies_check"
+depf=("${KS_TOP}/depends")
 for f in "$@" ; do
    depf+=($(realpath -e "$f"))
 done

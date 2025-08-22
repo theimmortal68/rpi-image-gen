@@ -40,7 +40,7 @@ merge_config_section() {
       while IFS="=" read -r key value ; do
          [[ "$key" =~ ^#.*$ ]] && continue
          [[ "$key" =~ ^$ ]] && continue
-         local var=IGconf_"${section}"_"${key,,}"
+         local var=KSconf_"${section}"_"${key,,}"
          assignv "$var" "$value"
       done < <(printf '%s\n' "$attrs")
    fi
@@ -85,7 +85,7 @@ aggregate_config() {
 #
 apply_options() {
    if [[ $# -eq 2 && -f $2 ]] ; then
-      local prefix=IGconf_"${1,,}"
+      local prefix=KSconf_"${1,,}"
       local attrs=$(cat "$2")
    else
       local prefix=IGconf
@@ -116,7 +116,7 @@ aggregate_options() {
    while IFS="=" read -r key value ; do
       [[ "$key" =~ ^#.*$ ]] && continue
       [[ "$key" =~ ^$ ]] && continue
-      local var="IGconf_${section}_${key,,}"
+      local var="KSconf_${section}_${key,,}"
       assignv "$var" "$value"
    done < <(printf '%s\n' "$attrs")
 }
