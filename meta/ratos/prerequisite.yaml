@@ -22,6 +22,8 @@ mmdebstrap:
     - uuid
     - gnupg
     - unzip
+    - rsyslog
+    - logrotate
   customize-hooks:
     - |-
       chroot "$1" /bin/sh -eu -c '
