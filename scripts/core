@@ -88,7 +88,7 @@ apply_options() {
       local prefix=KSconf_"${1,,}"
       local attrs=$(cat "$2")
    else
-      local prefix=IGconf
+      local prefix=KSconf
       local attrs=$(cat "$1")
    fi
    while IFS="=" read -r key value ; do
@@ -104,7 +104,7 @@ apply_options() {
 
 
 # shell variable list parser with prefix that reads key value pairs into the env
-# as above, but only if the fully qualified IGconf key is not set or set to the
+# as above, but only if the fully qualified KSconf key is not set or set to the
 # empty string.
 aggregate_options() {
    if [[ $# -eq 2 && -f $2 ]] ; then

@@ -9,7 +9,7 @@ SETUP=setup.sh
 
 
 # Install provision map
-if igconf isset image_pmap ; then
+if ksconf isset image_pmap ; then
    cp ./device/provisionmap-${KSconf_image_pmap}.json ${KSconf_sys_outputdir}/provisionmap.json
 fi
 
