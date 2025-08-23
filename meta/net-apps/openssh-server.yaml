@@ -27,7 +27,6 @@ mmdebstrap:
         if [ -n "${KSconf_meta_ssh_pubkey:-}" ] && [ -f /etc/ssh/sshd_config ]; then
           sed -i -E "s/^[# ]*PasswordAuthentication .*/PasswordAuthentication no/" /etc/ssh/sshd_config || true
           sed -i -E "s/^[# ]*ChallengeResponseAuthentication .*/ChallengeResponseAuthentication no/" /etc/ssh/sshd_config || true
-        fi
-      '
+
     # Enable the service if your helper manages units without .service suffix
     - '"$BDEBSTRAP_HOOKS/enable-units" "$1" ssh'
