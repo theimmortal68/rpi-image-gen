@@ -283,7 +283,7 @@ load_profile main   "$KS_PROFILE"
 if ksconf_isset image_profile ; then
   load_profile image "${KS_IMAGE}/profile/${KSconf_image_profile}"
 fi
-if ksconf_isy device_ssh_user1 ; then
+if ksconf_isy device_ssh_user ; then
   layer_push auto net-apps/openssh-server
 fi
 layer_push auto sys-apps/finalize-upgrade
