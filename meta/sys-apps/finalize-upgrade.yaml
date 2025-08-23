@@ -33,4 +33,4 @@ mmdebstrap:
         date -u +"%Y-%m-%dT%H:%M:%SZ" > /root/.finalize-upgrade-done
       '
     # Ensure getty@tty1 is enabled using the standard helper (runs inside target)
-    - $KS_HELPERS/enable-units "$1" getty@tty1.service
+    - $BDEBSTRAP_HOOKS/enable-units "$1" getty@tty1.service

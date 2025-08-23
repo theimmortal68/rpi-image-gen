@@ -34,4 +34,4 @@ mmdebstrap:
         "$1/home/$KSconf_device_user/printer_data/config/moonraker.conf"
 
       # Enable via your helper (no .service suffix)
-      "$KS_HELPERS/enable-units" "$1" moonraker      "$KS_HELPERS/enable-units" "$1" moonraker
+      "$BDEBSTRAP_HOOKS/enable-units" "$1" moonraker      "$BDEBSTRAP_HOOKS/enable-units" "$1" moonraker

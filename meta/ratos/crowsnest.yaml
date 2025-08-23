@@ -17,4 +17,4 @@ mmdebstrap:
         export CROWSNEST_ADD_CROWSNEST_MOONRAKER=1
         make -C "$H/crowsnest" install
       '
-    - '"$KS_HELPERS/enable-units" "$1" crowsnest'
+    - '"$BDEBSTRAP_HOOKS/enable-units" "$1" crowsnest'

@@ -37,4 +37,4 @@ mmdebstrap:
       install -d -m 0755 "$1/home/$KSconf_device_user/printer_data/systemd"
       install -m 0644 "$KS_TEMPLATES/klipper/klipper.env" "$1/home/$KSconf_device_user/printer_data/systemd/klipper.env"
 
-      "$KS_HELPERS/enable-units" "$1" klipper
+      "$BDEBSTRAP_HOOKS/enable-units" "$1" klipper

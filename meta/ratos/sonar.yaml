@@ -25,4 +25,4 @@ mmdebstrap:
         make -C "$H/sonar" install
         runuser -u "$U" -- rm -f "$H/sonar/tools/.config"
       '
-    - '"$KS_HELPERS/enable-units" "$1" sonar'
+    - '"$BDEBSTRAP_HOOKS/enable-units" "$1" sonar'

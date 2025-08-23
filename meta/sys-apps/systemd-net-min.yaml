@@ -7,8 +7,8 @@ mmdebstrap:
     - systemd-sysv
     - systemd-timesyncd
   customize-hooks:
-    - $KS_HELPERS/enable-units "$1" systemd-networkd
-    - $KS_HELPERS/enable-units "$1" systemd-timesyncd
+    - $BDEBSTRAP_HOOKS/enable-units "$1" systemd-networkd
+    - $BDEBSTRAP_HOOKS/enable-units "$1" systemd-timesyncd
     - mkdir -p $1/etc/systemd/network $1/etc/systemd/system/getty@tty1.service.d
     - ln -sf /dev/null $1/etc/systemd/network/99-default.link
     - ln -sf /dev/null $1/etc/systemd/network/73-usb-net-by-mac.link
